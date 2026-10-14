@@ -80,6 +80,16 @@ function main() {
   if (target === "staging") {
     config.preview_urls = true;
   }
+  // Production served on workers.dev needs that address on. Left to wrangler's
+  // default, a Worker deployed by the Deploy button came up without it.
+  if (
+    target === "production" &&
+    new URL(OVERRIDES.frontendCanonicalBaseUrl).hostname.endsWith(
+      ".workers.dev",
+    )
+  ) {
+    config.workers_dev = true;
+  }
 
   writeFileSync(out, JSON.stringify(config, null, 2) + "\n");
   console.log(
