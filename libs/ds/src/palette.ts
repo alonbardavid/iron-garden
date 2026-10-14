@@ -50,6 +50,11 @@ const light = {
   removedBg: "#FCEAEE",
   removedNumber: "#F8D6DD",
   removedMark: "#F2B8C3",
+  // Lines on their way out of a file, beside where they went.
+  movedBg: "#FDF1E3",
+  movedNumber: "#F8DFC0",
+  movedMark: "#F2C894",
+  movedLine: "#D9A857",
   emptySide: "#F3F5F7",
   referenceNumber: "#E6E9EC",
 
@@ -123,6 +128,10 @@ const dark: Record<PaletteToken, string> = {
   removedBg: "#2E181C",
   removedNumber: "#3C1F25",
   removedMark: "#5E2A34",
+  movedBg: "#2B2015",
+  movedNumber: "#3A2A18",
+  movedMark: "#5E4120",
+  movedLine: "#8A6428",
   emptySide: "#1A1E22",
   referenceNumber: "#262B31",
 

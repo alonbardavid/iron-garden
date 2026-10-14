@@ -6,6 +6,7 @@ import { splitRows } from "@lib/diff";
 import { palette } from "@lib/ds";
 import board from "../../../components/board.module.css";
 import {
+  ArrowRightIcon,
   CopyIcon,
   FoldIcon,
   ShowAboveIcon,
@@ -16,6 +17,8 @@ import {
   GhostButton,
   IconButton,
   LayoutSwitch,
+  MOVED_INK,
+  MOVED_SOFT,
   REFERENCE_INK,
   REFERENCE_SOFT,
   type DiffLayout,
@@ -73,6 +76,13 @@ const KIND = {
 } as const;
 
 const EMPTY_SIDE = palette.emptySide;
+
+// The lines moved code came from, beside where it went.
+const MOVED_SIDE = {
+  bg: palette.movedBg,
+  number: palette.movedNumber,
+  mark: palette.movedMark,
+};
 
 // The reference beside copied lines: greyed, so what differs stands out.
 const REFERENCE_SIDE = {
@@ -614,7 +624,15 @@ const Side = ({
 };
 
 // A line in its syntax colors, with what changed against its partner marked.
-const Painted = ({ file, index }: { file: FileLines; index: number }) => {
+const Painted = ({
+  file,
+  index,
+  mark = KIND[file.lines[index]!.kind].mark,
+}: {
+  file: FileLines;
+  index: number;
+  mark?: string;
+}) => {
   const line = file.lines[index]!;
   const partner = file.partners[index];
   const other =
@@ -625,7 +643,6 @@ const Painted = ({ file, index }: { file: FileLines; index: number }) => {
       : line.kind === "removed"
         ? changedSpans(line.text, other.text)?.before
         : changedSpans(other.text, line.text)?.after;
-  const mark = KIND[line.kind].mark;
   return (
     <>
       {paint(line.text, file.lang, spans ?? undefined).map((piece, i) => (
@@ -1061,6 +1078,142 @@ export const ReferenceLines = ({
     </>
   );
 };
+
+// Moved lines beside the lines they came from, in split layout: the origin
+// orange on the left, the lines here green on the right, with what changed
+// on the way marked. Removed lines are origin lines that did not make it,
+// added ones are new here. The marks' owners are by line of `file`.
+export const MovedLines = ({
+  file,
+  title,
+}: {
+  file: FileLines;
+  // Names the origin beside its lines.
+  title: string;
+}) => {
+  const rows = splitRows(file.lines);
+  const changes = rows.map(({ right }) =>
+    right === null ? null : (file.marks?.owner[right] ?? null),
+  );
+  const blocks = blocksOf(changes);
+  return (
+    <>
+      {rows.map(({ left, right }, r) => (
+        <div
+          key={left ?? `r${right}`}
+          className={board.ruled}
+          style={{ display: "flex", minHeight: 20, position: "relative" }}
+        >
+          <RuleChip file={file} change={changes[r]!} />
+          <MarkCells
+            marks={file.marks}
+            change={changes[r]!}
+            block={blocks[r]!}
+          />
+          <NoteCell file={file} indexes={[]} />
+          <MovedSide file={file} index={left} side="old" />
+          <MovedGutter head={r === 0} title={title} />
+          <MovedSide file={file} index={right} side="new" />
+        </div>
+      ))}
+    </>
+  );
+};
+
+const MovedSide = ({
+  file,
+  index,
+  side,
+}: {
+  file: FileLines;
+  index: number | null;
+  side: "old" | "new";
+}) => {
+  if (index === null) {
+    return <Side file={file} index={null} side={side} />;
+  }
+  const line = file.lines[index]!;
+  const kind =
+    side === "old"
+      ? { ...MOVED_SIDE, sign: "", color: palette.muted }
+      : KIND.added;
+  return (
+    <div
+      style={{
+        flex: "1 1 0",
+        minWidth: 0,
+        display: "flex",
+        background: kind.bg,
+      }}
+    >
+      <span style={{ ...numberCell, background: kind.number }}>
+        {side === "old"
+          ? line.kind !== "added" && line.old
+          : line.kind !== "removed" && line.new}
+      </span>
+      <span
+        style={{
+          flex: "0 0 18px",
+          textAlign: "center",
+          color: kind.color,
+          userSelect: "none",
+        }}
+      >
+        {kind.sign}
+      </span>
+      <span
+        style={{ ...code, flex: "1 1 auto", minWidth: 0, paddingRight: 10 }}
+      >
+        <Painted file={file} index={index} mark={kind.mark} />
+      </span>
+    </div>
+  );
+};
+
+// The column between the sides: an arrow on the first row, and a dashed
+// line down the rest.
+const MovedGutter = ({ head, title }: { head: boolean; title: string }) => (
+  <span
+    title={title}
+    style={{
+      flex: "0 0 24px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      background: palette.surface,
+      borderLeft: `1px solid ${palette.line}`,
+      borderRight: `1px solid ${palette.line}`,
+    }}
+  >
+    {head ? (
+      <span
+        aria-hidden
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          background: MOVED_SOFT,
+          color: MOVED_INK,
+        }}
+      >
+        <ArrowRightIcon size={11} />
+      </span>
+    ) : (
+      <span
+        aria-hidden
+        style={{
+          flex: "1 1 auto",
+          width: 0,
+          borderLeft: `1px dashed ${palette.movedLine}`,
+        }}
+      />
+    )}
+  </span>
+);
 
 const referenceRowIndexes = (row: ReferenceRow) =>
   row.kind === "copied"
