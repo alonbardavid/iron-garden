@@ -32,5 +32,8 @@
     "PullRequestProcessor": { "type": "durable-object", "storage": "sqlite" },
   },
   "ai": { "binding": "AI" },
+  // Serve on <name>.<subdomain>.workers.dev, the address the app is told to
+  // use unless PROD_HOST names a custom domain.
+  "workers_dev": true,
   "observability": { "enabled": true },
 }
