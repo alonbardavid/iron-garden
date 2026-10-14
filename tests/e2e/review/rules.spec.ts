@@ -127,8 +127,9 @@ test("moved code compares with where it came from", async ({ page }) => {
     .getByRole("complementary", { name: "Brackets" })
     .getByRole("link", { name: /Fees move to their own file/ })
     .click();
-  await expect(page.getByText("moved from")).toBeVisible();
-  await page.getByRole("button", { name: "Compare with original" }).click();
+  await expect(
+    page.getByRole("button", { name: "Left side: src/old.ts" }),
+  ).toBeVisible();
   await expect(
     page.getByText("Moved as is: no line changed on the way."),
   ).toBeVisible();

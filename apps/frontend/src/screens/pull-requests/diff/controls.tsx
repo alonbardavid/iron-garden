@@ -14,18 +14,16 @@ export type LeftSide = "before" | "moved" | "reference";
 
 export const REFERENCE_INK = palette.accentInk;
 export const REFERENCE_SOFT = palette.accentTint;
-const MOVED_INK = palette.warningInk;
-const MOVED_SOFT = palette.warningSoft;
+export const MOVED_INK = palette.warningInk;
+export const MOVED_SOFT = palette.warningSoft;
 
-// A diff's layout and left side. Lines with a reference open compared with
-// it.
-export function useComparison(hasReference: boolean) {
+// A diff's layout and left side. Lines with a reference or an origin open
+// split, compared with it.
+export function useComparison(opening: LeftSide) {
   const [layout, setLayout] = useState<DiffLayout>(
-    hasReference ? "split" : "unified",
+    opening === "before" ? "unified" : "split",
   );
-  const [left, setLeft] = useState<LeftSide>(
-    hasReference ? "reference" : "before",
-  );
+  const [left, setLeft] = useState<LeftSide>(opening);
   return {
     layout,
     setLayout,

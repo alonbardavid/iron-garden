@@ -58,6 +58,7 @@ import {
   FoldRow,
   GapRow,
   Lines,
+  MovedLines,
   ReferenceLines,
   RAIL_OFF,
   RAIL_ON,
@@ -680,7 +681,9 @@ const RangeCard = ({
 }) => {
   const [loaded, setLoaded] = useState(!generated);
   const { layout, setLayout, left, setLeft, comparing, compare } =
-    useComparison(!!range.reference);
+    useComparison(
+      range.reference ? "reference" : range.movedFrom ? "moved" : "before",
+    );
   const { diff, error } = useFileDiff(pr, range.path, loaded);
   const change = pr.files.find((f) => f.path === range.path)?.change;
   const picker = (stats?: string) => (
@@ -746,11 +749,6 @@ const RangeCard = ({
           </Text>
         )}
         <Box style={{ flex: 1 }} />
-        {range.movedFrom && !comparing("moved") && (
-          <GhostButton onClick={() => compare("moved")}>
-            Compare with original
-          </GhostButton>
-        )}
         {range.reference && !comparing("reference") && (
           <CompareButton onClick={() => compare("reference")} />
         )}
@@ -1031,7 +1029,7 @@ const RangeLines = ({
 };
 
 // Moved lines beside the lines they came from: only what changed on the way
-// is marked. Read-only; accept the lines in the diff.
+// is marked. Each line here is accepted as its line in the file's diff.
 const MovedCompare = ({
   pr,
   path,
@@ -1048,6 +1046,15 @@ const MovedCompare = ({
   left: ReactNode;
 }) => {
   const source = useFileDiff(pr, from.path);
+  const marks = useLineMarks(path, lines);
+  // Each new line's index in the file's diff.
+  const byNew = useMemo(
+    () =>
+      new Map(
+        lines.flatMap((l, i) => (l.kind === "removed" ? [] : [[l.new, i]])),
+      ),
+    [lines],
+  );
   const compared = useMemo(() => {
     if (!source.diff || !("lines" in source.diff)) {
       return null;
@@ -1087,15 +1094,20 @@ const MovedCompare = ({
     return <SkeletonCode lines={8} />;
   }
   const changed = compared.lines.some((l) => l.kind !== "same");
+  const file: FileLines = {
+    ...compared,
+    marks: marks && {
+      ...marks,
+      owner: compared.lines.map((l) =>
+        l.kind === "removed" ? null : (marks.owner[byNew.get(l.new)!] ?? null),
+      ),
+    },
+  };
   return (
     <>
       <SplitHeader left={left} after={path} />
       <CodeBlock>
-        <Lines
-          file={compared}
-          span={{ from: 0, to: compared.lines.length }}
-          layout="split"
-        />
+        <MovedLines file={file} title={`Moved from ${from.path}`} />
       </CodeBlock>
       <Text
         py={8}

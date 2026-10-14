@@ -353,7 +353,7 @@ const Chunk = ({
   referenced: Referenced | null;
 }) => {
   const { layout, setLayout, left, setLeft, comparing, compare } =
-    useComparison(!!referenced);
+    useComparison(referenced ? "reference" : "before");
   const withReference = comparing("reference");
   const reference = useReferenceCompare(pr, file, referenced, withReference);
   const marks = file.marks;
