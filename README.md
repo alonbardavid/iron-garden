@@ -31,11 +31,9 @@ Artifacts, which stores every repository, needs it).
    account, creates the database and the other resources, and deploys the Worker. Keep the
    defaults — a production Worker named `iron-garden` with a D1 database `iron-garden-prod`,
    built with `pnpm run build` and deployed with `pnpm run deploy` — or rename them.
-2. Fill in the two secrets it asks for:
-   - `BETTER_AUTH_SECRET` — any long random string. It signs sessions and encrypts stored
-     GitHub tokens, so keep it stable.
-   - `SETUP_TOKEN` — any random string of 4 characters or more. You type it once, to create
-     the first admin.
+2. Fill in the secret it asks for, `SETUP_TOKEN`: any random string of 4 characters or
+   more. You type it once, to create the first admin. The first deploy generates
+   `BETTER_AUTH_SECRET`, which signs sessions and encrypts stored GitHub tokens.
 3. When the deploy finishes, open the Worker's URL
    (`https://iron-garden.<your-subdomain>.workers.dev`).
 4. The first visit shows the setup form: enter `SETUP_TOKEN` and the first admin's details.

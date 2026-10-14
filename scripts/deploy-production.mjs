@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, join } from "node:path";
 import ts from "typescript";
 
 // Deploys the production instance described by the root wrangler.jsonc: the
@@ -15,10 +17,12 @@ import ts from "typescript";
 //
 // The origin is https://$PROD_HOST when set, else the Worker's workers.dev
 // address, which needs CLOUDFLARE_API_TOKEN (Workers Builds provides one).
+// The first deploy generates BETTER_AUTH_SECRET.
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 const GENERATED = "dist/worker/wrangler.generated.production.json";
 const STEPS = ["config", "migrate", "deploy"];
+const GENERATED_SECRETS = ["BETTER_AUTH_SECRET"];
 
 async function main() {
   const step = process.argv[2] ?? "deploy";
@@ -44,6 +48,9 @@ async function main() {
   if (step === "config") {
     return;
   }
+  // Checked before migrating, so a failed check changes nothing.
+  const secretsFile =
+    step === "deploy" ? generatedSecretsFile(instance.name) : null;
   wrangler([
     "d1",
     "migrations",
@@ -54,8 +61,61 @@ async function main() {
     GENERATED,
   ]);
   if (step === "deploy") {
-    wrangler(["deploy", "--config", GENERATED]);
+    wrangler([
+      "deploy",
+      "--config",
+      GENERATED,
+      ...(secretsFile ? ["--secrets-file", secretsFile] : []),
+    ]);
   }
+}
+
+// A file of random values for the secrets the Worker lacks, uploaded with the
+// version so it never runs without them; none once they are set, and
+// --secrets-file leaves the ones it omits alone. Only a Worker that does not
+// exist yet counts as lacking them: any other failure to list them stops the
+// deploy, because overwriting BETTER_AUTH_SECRET signs everyone out and makes
+// every stored GitHub token unreadable.
+function generatedSecretsFile(workerName) {
+  const result = spawnSync(
+    "pnpm",
+    [
+      "--silent",
+      "--filter",
+      "@app/backend",
+      "exec",
+      "wrangler",
+      "secret",
+      "list",
+      "--name",
+      workerName,
+      "--format",
+      "json",
+    ],
+    { cwd: root, encoding: "utf8" },
+  );
+  let existing;
+  if (result.status === 0) {
+    existing = JSON.parse(result.stdout).map((secret) => secret.name);
+  } else if (result.stderr.includes(`Worker "${workerName}" not found`)) {
+    existing = [];
+  } else {
+    process.stderr.write(result.stderr);
+    fail(`Could not list the secrets of ${workerName}`);
+  }
+  const missing = GENERATED_SECRETS.filter((name) => !existing.includes(name));
+  if (missing.length === 0) {
+    return null;
+  }
+  const dir = mkdtempSync(join(tmpdir(), "deploy-secrets-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const file = join(dir, "secrets.json");
+  const values = Object.fromEntries(
+    missing.map((name) => [name, randomBytes(32).toString("hex")]),
+  );
+  writeFileSync(file, JSON.stringify(values), { mode: 0o600 });
+  console.log(`Generating ${missing.join(", ")} for ${workerName}`);
+  return file;
 }
 
 // The Worker name and D1 database from the root wrangler.jsonc, which the

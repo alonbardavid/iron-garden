@@ -63,9 +63,6 @@
   },
   "cloudflare": {
     "bindings": {
-      "BETTER_AUTH_SECRET": {
-        "description": "Any long random string, e.g. from `openssl rand -hex 32`. It signs sessions and encrypts stored GitHub tokens, so keep it stable."
-      },
       "SETUP_TOKEN": {
         "description": "Any random string of 4 characters or more. You enter it once, on the first visit, to create the first admin."
       },

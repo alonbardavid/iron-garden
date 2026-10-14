@@ -1,4 +1,3 @@
-# The secrets a deployed Worker needs; the Deploy to Cloudflare button asks for
-# them. Local dev sets both in apps/backend/wrangler.jsonc instead.
-BETTER_AUTH_SECRET= # any long random string: openssl rand -hex 32
+# The secret the Deploy to Cloudflare button asks for. The first deploy
+# generates BETTER_AUTH_SECRET. Local dev sets both in apps/backend/wrangler.jsonc.
 SETUP_TOKEN= # 4 characters or more, entered once to create the first admin

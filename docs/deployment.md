@@ -115,6 +115,11 @@ deploys. Its origin is `https://$PROD_HOST` when that build variable is set, els
 Worker's workers.dev address, read through the build's `CLOUDFLARE_API_TOKEN`. Run by hand,
 it needs one of the two in the shell.
 
+The button asks only for `SETUP_TOKEN`. The deploy script generates `BETTER_AUTH_SECRET` when
+the Worker lacks it, which is on the first deploy, and uploads it with that version; later
+deploys leave it alone. Its value is never shown and cannot be read back. Replacing it with
+`wrangler secret put` signs everyone out and makes the stored GitHub tokens unreadable.
+
 Leave Workers Builds' non-production branch builds off: their default command deploys the
 root `wrangler.jsonc` directly, which cannot build this app. The GitHub workflows skip
 in a copy without the `CLOUDFLARE_API_TOKEN` secret, so the two never deploy the same Worker
