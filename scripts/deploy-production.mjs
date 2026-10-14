@@ -67,6 +67,9 @@ async function main() {
       GENERATED,
       ...(secretsFile ? ["--secrets-file", secretsFile] : []),
     ]);
+    if (!process.env.PROD_HOST) {
+      await enableWorkersDev(instance.name, origin);
+    }
   }
 }
 
@@ -171,14 +174,32 @@ async function workersDevOrigin(workerName) {
       "Set PROD_HOST to the production hostname, or CLOUDFLARE_API_TOKEN to serve on workers.dev",
     );
   }
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || (await soleAccount());
   const { subdomain } = await cloudflare(
-    `/accounts/${accountId}/workers/subdomain`,
+    `/accounts/${await accountId()}/workers/subdomain`,
   );
   if (!subdomain) {
     fail("The account has no workers.dev subdomain; set PROD_HOST instead");
   }
   return `https://${workerName}.${subdomain}.workers.dev`;
+}
+
+// The app's origin is its workers.dev address, so that address must be on.
+// `workers_dev: true` asks wrangler to turn it on, yet a Worker deployed by
+// the Deploy button came up with it off; this turns it on and checks it.
+async function enableWorkersDev(workerName, origin) {
+  const path = `/accounts/${await accountId()}/workers/scripts/${workerName}/subdomain`;
+  await cloudflare(path, { method: "POST", body: { enabled: true } });
+  const { enabled } = await cloudflare(path);
+  if (!enabled) {
+    fail(
+      `workers.dev is still off for ${workerName}; ${origin} will not answer`,
+    );
+  }
+  console.log(`Serving on ${origin}`);
+}
+
+async function accountId() {
+  return process.env.CLOUDFLARE_ACCOUNT_ID || (await soleAccount());
 }
 
 async function soleAccount() {
@@ -191,15 +212,25 @@ async function soleAccount() {
   return accounts[0].id;
 }
 
-async function cloudflare(path) {
+async function cloudflare(path, { method = "GET", body } = {}) {
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
+    method,
+    headers: {
+      Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+      ...(body && { "Content-Type": "application/json" }),
+    },
+    body: body && JSON.stringify(body),
   });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body.success) {
-    fail(`Cloudflare API ${path} answered HTTP ${response.status}`);
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.success) {
+    const errors = (result.errors ?? [])
+      .map((error) => `${error.message} [code: ${error.code}]`)
+      .join("; ");
+    fail(
+      `Cloudflare API ${method} ${path} answered HTTP ${response.status}${errors && `: ${errors}`}`,
+    );
   }
-  return body.result;
+  return result.result;
 }
 
 // Wrangler runs from apps/backend, where it is installed.

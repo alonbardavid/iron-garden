@@ -112,9 +112,10 @@ command), which runs `scripts/deploy-production.mjs`. It takes the name and data
 root `wrangler.jsonc`, resolves the database by id, else by name, creating it when missing,
 generates the production config as `gen-wrangler-config.mjs` does, applies migrations and
 deploys. Its origin is `https://$PROD_HOST` when that build variable is set, else the
-Worker's workers.dev address, read through the build's `CLOUDFLARE_API_TOKEN`, and then the
-config sets `workers_dev: true` so that address is served. Run by hand, it needs one of the
-two in the shell.
+Worker's workers.dev address, read through the build's `CLOUDFLARE_API_TOKEN`. That address
+must be on: the config sets `workers_dev: true`, and after deploying the script turns it on
+through the API and fails if it stays off. Run by hand, it needs `PROD_HOST` or the token in
+the shell.
 
 The button asks only for `SETUP_TOKEN`. The deploy script generates `BETTER_AUTH_SECRET` when
 the Worker lacks it, which is on the first deploy, and uploads it with that version; later
