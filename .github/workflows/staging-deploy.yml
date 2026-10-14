@@ -1,0 +1,126 @@
+name: Staging Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Deploys need Cloudflare credentials. A copy without them (a fork, or one
+  # made by the Deploy to Cloudflare button, which deploys with Workers Builds
+  # instead) skips this workflow rather than failing it.
+  cloudflare:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "configured=$([ -n "$TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: cloudflare
+    if: needs.cloudflare.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Refuse to run outside main
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "::error::Staging deploy invoked off main (${{ github.ref }}). Aborting."
+            exit 1
+          fi
+
+      - name: Resolve Cloudflare account and subdomain
+        id: cf
+        uses: ./.github/actions/cloudflare-env
+        with:
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          resolve-subdomain: "true"
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # The staging D1 is normally created during setup (previews clone from
+      # it); the create branch here is a self-healing/rebuild path. Migrations
+      # below keep it at schema either way.
+      - name: Find or create staging D1
+        id: d1
+        run: |
+          set -euo pipefail
+          DB_NAME=iron-garden-staging
+          EXISTING=$(pnpm --silent --filter @app/backend exec wrangler d1 list --json \
+            | jq -r ".[] | select(.name == \"$DB_NAME\") | .uuid")
+          if [ -n "$EXISTING" ]; then
+            echo "Found existing staging D1: $DB_NAME ($EXISTING)"
+            ID="$EXISTING"
+          else
+            echo "Creating staging D1: $DB_NAME"
+            pnpm --silent --filter @app/backend exec wrangler d1 create "$DB_NAME"
+            ID=$(pnpm --silent --filter @app/backend exec wrangler d1 info "$DB_NAME" --json \
+              | jq -r '.uuid')
+          fi
+          if [ -z "$ID" ] || [ "$ID" = "null" ]; then
+            echo "::error::Could not resolve UUID for $DB_NAME"
+            exit 1
+          fi
+          echo "db_name=$DB_NAME" >> "$GITHUB_OUTPUT"
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+
+      - name: Generate staging wrangler config
+        env:
+          TARGET: staging
+          DB_NAME: ${{ steps.d1.outputs.db_name }}
+          DB_ID: ${{ steps.d1.outputs.id }}
+          DEPLOY_ORIGIN: https://iron-garden-staging.${{ steps.cf.outputs.subdomain }}.workers.dev
+        run: |
+          echo "Staging canonical URL: $DEPLOY_ORIGIN"
+          node scripts/gen-wrangler-config.mjs
+
+      - name: Apply staging migrations
+        run: pnpm --filter @app/backend exec wrangler d1 migrations apply DB --config dist/worker/wrangler.generated.staging.json --remote
+
+      # Sets the active deployment of the iron-garden-staging worker (its
+      # default workers.dev route). Worker Previews deployed by
+      # preview-deploy.yml are separate and unaffected.
+      - name: Deploy
+        run: |
+          set -euo pipefail
+          pnpm --filter @app/backend exec wrangler deploy --config dist/worker/wrangler.generated.staging.json \
+            2>&1 | tee /tmp/deploy.log
+
+      # main's bundle size, recorded so preview-deploy.yml can tell a PR how much
+      # its branch grows the worker. Cheap: the size comes from the deploy log
+      # that was printed anyway, so nothing is built twice.
+      - name: Record worker size baseline
+        run: node scripts/worker-size-comment.mjs /tmp/deploy.log --json > /tmp/worker-size.json
+
+      - name: Upload worker size baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-size-main
+          path: /tmp/worker-size.json
+          retention-days: 90

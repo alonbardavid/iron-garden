@@ -1,0 +1,99 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Deploys need Cloudflare credentials. A copy without them (a fork, or one
+  # made by the Deploy to Cloudflare button, which deploys with Workers Builds
+  # instead) skips this workflow rather than failing it.
+  cloudflare:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "configured=$([ -n "$TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: cloudflare
+    if: needs.cloudflare.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Refuse to run outside main
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "::error::Production deploy invoked off main (${{ github.ref }}). Aborting."
+            exit 1
+          fi
+
+      - name: Resolve Cloudflare account and subdomain
+        id: cf
+        uses: ./.github/actions/cloudflare-env
+        with:
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          resolve-subdomain: "true"
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # Production resolves its D1 by name, exactly like staging — but it must
+      # NEVER find-or-create. Staging's create branch is a self-healing path; on
+      # prod the same branch would silently deploy against a brand new empty
+      # database. Missing DB = hard failure, on purpose. Do not "simplify" this
+      # into a find-or-create.
+      - name: Resolve production D1
+        id: d1
+        run: |
+          set -euo pipefail
+          DB_NAME=iron-garden-prod
+          ID=$(pnpm --silent --filter @app/backend exec wrangler d1 list --json \
+            | jq -r ".[] | select(.name == \"$DB_NAME\") | .uuid")
+          if [ -z "$ID" ] || [ "$ID" = "null" ]; then
+            echo "::error::Production D1 $DB_NAME not found. Create it once with 'wrangler d1 create $DB_NAME'. Production deploys never auto-create a database."
+            exit 1
+          fi
+          echo "Resolved production D1: $DB_NAME ($ID)"
+          echo "db_name=$DB_NAME" >> "$GITHUB_OUTPUT"
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+
+      - name: Generate production wrangler config
+        env:
+          TARGET: production
+          DB_NAME: ${{ steps.d1.outputs.db_name }}
+          DB_ID: ${{ steps.d1.outputs.id }}
+          # Without a PROD_HOST, production serves on its workers.dev address.
+          DEPLOY_ORIGIN: https://${{ vars.PROD_HOST || format('iron-garden.{0}.workers.dev', steps.cf.outputs.subdomain) }}
+        run: node scripts/gen-wrangler-config.mjs
+
+      - name: Apply production migrations
+        run: pnpm --filter @app/backend exec wrangler d1 migrations apply DB --config dist/worker/wrangler.generated.production.json --remote
+
+      - name: Deploy
+        run: pnpm --filter @app/backend exec wrangler deploy --config dist/worker/wrangler.generated.production.json

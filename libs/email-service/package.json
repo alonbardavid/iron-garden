@@ -1,0 +1,33 @@
+{
+  "name": "@lib/email-service",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@lib/capabilities": "workspace:*",
+    "@lib/contract": "workspace:*",
+    "@lib/email-ds": "workspace:*",
+    "@lib/logging": "workspace:*",
+    "@react-email/components": "^1.0.12",
+    "mimetext": "^3.0.27",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261008.1",
+    "@types/react": "^18.3.1",
+    "typescript": "^5.3.3"
+  }
+}

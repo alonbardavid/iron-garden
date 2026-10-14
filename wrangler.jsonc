@@ -1,0 +1,36 @@
+// The production instance, as the Deploy to Cloudflare button reads it. The
+// button lets you rename the Worker and the database, provisions them, and
+// writes the new database_id here in your copy of the repository.
+//
+// Nothing deploys this file directly: `pnpm run deploy`
+// (scripts/deploy-production.mjs) takes the name and the database from it and
+// stamps them onto the config the build emits, which carries every binding.
+// Local dev uses apps/backend/wrangler.jsonc.
+{
+  "$schema": "apps/backend/node_modules/wrangler/config-schema.json",
+  "name": "iron-garden",
+  "main": "apps/backend/src/index.ts",
+  "compatibility_date": "2026-02-13",
+  "compatibility_flags": ["nodejs_compat", "enhanced_error_serialization"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "iron-garden-prod",
+      // A placeholder: the button replaces it with the database it creates.
+      "database_id": "00000000-0000-4000-8000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "CHAT_CHANNELS", "class_name": "ChatChannelObject" },
+      { "name": "PROCESSING", "class_name": "PullRequestProcessor" },
+    ],
+  },
+  "exports": {
+    "ChatChannelObject": { "type": "durable-object", "storage": "sqlite" },
+    "PullRequestProcessor": { "type": "durable-object", "storage": "sqlite" },
+  },
+  "ai": { "binding": "AI" },
+  "observability": { "enabled": true },
+}

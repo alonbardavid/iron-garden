@@ -1,0 +1,52 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["@cloudflare/workers-types"],
+    "lib": ["ES2022", "ESNext.Disposable"]
+  },
+  "references": [
+    {
+      "path": "../../libs/ai"
+    },
+    {
+      "path": "../../libs/capabilities"
+    },
+    {
+      "path": "../../libs/collab"
+    },
+    {
+      "path": "../../libs/contract"
+    },
+    {
+      "path": "../../libs/db-models"
+    },
+    {
+      "path": "../../libs/email-service"
+    },
+    {
+      "path": "../../libs/forge"
+    },
+    {
+      "path": "../../libs/git-host"
+    },
+    {
+      "path": "../../libs/github"
+    },
+    {
+      "path": "../../libs/identity"
+    },
+    {
+      "path": "../../libs/logging"
+    },
+    {
+      "path": "../../libs/review"
+    },
+    {
+      "path": "../../libs/server-commons"
+    }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,44 @@
+/* Three dots taking turns, while the agent works on an answer. */
+.thinking {
+  display: inline-flex;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px 14px 14px 4px;
+  background: #f0f2f4;
+}
+
+.thinking span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8a929b;
+  animation: thinking 1.2s ease-in-out infinite;
+}
+
+.thinking span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.thinking span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes thinking {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking span {
+    animation: none;
+    opacity: 0.6;
+  }
+}

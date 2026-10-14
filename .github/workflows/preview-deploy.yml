@@ -1,0 +1,237 @@
+name: Preview Deploy
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  # Reading the worker-size baseline artifact from the staging-deploy run on main.
+  actions: read
+
+jobs:
+  # Deploys need Cloudflare credentials. A copy without them (a fork, or one
+  # made by the Deploy to Cloudflare button, which deploys with Workers Builds
+  # instead) skips this workflow rather than failing it.
+  cloudflare:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "configured=$([ -n "$TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  upload:
+    needs: cloudflare
+    if: needs.cloudflare.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Cloudflare's limit on the gzipped worker script: 3 MiB on the Free plan,
+      # 10 MiB on Workers Paid. Change this if the plan changes.
+      WORKER_SIZE_LIMIT_MIB: "10"
+      # Warn in the PR comment when the gzipped bundle grows at least this much
+      # against the latest recorded size on main.
+      WORKER_SIZE_GROWTH_WARN_PCT: "20"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve Cloudflare account and subdomain
+        id: cf
+        uses: ./.github/actions/cloudflare-env
+        with:
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          resolve-subdomain: "true"
+
+      - name: Compute preview D1 name and alias
+        id: names
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          SANITIZED=$(printf '%s' "$BRANCH" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's/[^a-z0-9-]/-/g; s/--*/-/g; s/^-//; s/-$//' \
+            | cut -c1-34 \
+            | sed 's/-$//')
+          HASH=$(printf '%s' "$BRANCH" | sha1sum | cut -c1-6)
+          # The D1 name is also the Artifacts namespace, which allows 63 chars,
+          # so the branch part gets 34.
+          DB_NAME="iron-garden-preview-${SANITIZED}-${HASH}"
+          # Alias rules: lowercase letters/numbers/dashes, must start with a letter,
+          # and "<alias>-iron-garden-staging" must stay under 63 chars, so the
+          # alias gets 40. The branch part is cut, never the hash that keeps it unique.
+          ALIAS="br-$(printf '%s' "$SANITIZED" | cut -c1-30 | sed 's/-$//')-${HASH}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "db_name=$DB_NAME" >> "$GITHUB_OUTPUT"
+          echo "alias=$ALIAS" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Find or create preview D1
+        id: d1
+        run: |
+          set -euo pipefail
+          DB_NAME="${{ steps.names.outputs.db_name }}"
+          EXISTING=$(pnpm --silent --filter @app/backend exec wrangler d1 list --json \
+            | jq -r ".[] | select(.name == \"$DB_NAME\") | .uuid")
+          if [ -n "$EXISTING" ]; then
+            echo "Found existing preview D1: $DB_NAME ($EXISTING)"
+            echo "id=$EXISTING" >> "$GITHUB_OUTPUT"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Creating preview D1: $DB_NAME"
+            pnpm --silent --filter @app/backend exec wrangler d1 create "$DB_NAME"
+            ID=$(pnpm --silent --filter @app/backend exec wrangler d1 info "$DB_NAME" --json \
+              | jq -r '.uuid')
+            if [ -z "$ID" ] || [ "$ID" = "null" ]; then
+              echo "::error::Could not resolve UUID for newly created $DB_NAME"
+              exit 1
+            fi
+            echo "id=$ID" >> "$GITHUB_OUTPUT"
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Previews are seeded from the staging D1 (kept current by
+      # staging-deploy.yml on every push to main).
+      - name: Clone staging D1 into new preview
+        if: steps.d1.outputs.created == 'true'
+        run: |
+          set -euo pipefail
+          SOURCE_NAME=iron-garden-staging
+          echo "Exporting from source D1 $SOURCE_NAME"
+          pnpm --silent --filter @app/backend exec wrangler d1 export "$SOURCE_NAME" \
+            --remote --output /tmp/source-dump.sql
+          echo "Importing into ${{ steps.names.outputs.db_name }}"
+          pnpm --silent --filter @app/backend exec wrangler d1 execute "${{ steps.names.outputs.db_name }}" \
+            --remote --file /tmp/source-dump.sql
+
+      # The cloned D1 names staging's git repositories, so the preview gets its
+      # own copies. Anything already in its namespace is left from an earlier
+      # branch of the same name. Only a new D1 gets here, so a re-push would not
+      # retry a failure: the preview deploys without those repositories instead.
+      - name: Copy staging git repositories into new preview
+        if: steps.d1.outputs.created == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          node scripts/artifacts-repos.mjs clear "${{ steps.names.outputs.db_name }}"
+          node scripts/artifacts-repos.mjs copy iron-garden-staging "${{ steps.names.outputs.db_name }}"
+
+      - name: Generate preview wrangler config
+        env:
+          TARGET: preview
+          DB_NAME: ${{ steps.names.outputs.db_name }}
+          DB_ID: ${{ steps.d1.outputs.id }}
+          DEPLOY_ORIGIN: https://${{ steps.names.outputs.alias }}-iron-garden-staging.${{ steps.cf.outputs.subdomain }}.workers.dev
+        run: |
+          echo "Preview canonical URL: $DEPLOY_ORIGIN"
+          node scripts/gen-wrangler-config.mjs
+
+      - name: Apply migrations to preview D1
+        run: |
+          cd apps/backend
+          pnpm exec wrangler d1 migrations apply DB --config dist/worker/wrangler.generated.json --remote
+
+      # A Worker Preview, not an aliased version upload: Cloudflare creates no
+      # version URLs for a Worker with Durable Objects, and a version upload
+      # cannot apply their migrations. Each preview gets its own Durable Object
+      # namespace. Its name is the alias, so the URL keeps the alias's shape.
+      - name: Deploy preview
+        id: upload
+        run: |
+          set -euo pipefail
+          cd apps/backend
+          MESSAGE="[PREVIEW] branch=${{ steps.names.outputs.branch }} sha=${GITHUB_SHA::7}"
+          ALIAS="${{ steps.names.outputs.alias }}"
+          pnpm exec wrangler preview \
+            --config dist/worker/wrangler.generated.json \
+            --name "$ALIAS" \
+            --message "$MESSAGE" \
+            --tag "preview-${{ steps.names.outputs.db_name }}" \
+            2>&1 | tee /tmp/upload.log
+          # A preview without its stable URL is not deployed. wrangler prints
+          # none while the staging Worker has Preview URLs off, which the
+          # staging deploy turns on (see docs/deployment.md).
+          ALIAS_URL=$(grep -Eo "https://${ALIAS}-iron-garden-staging\.[a-z0-9.-]+\.workers\.dev" /tmp/upload.log | head -n1 || true)
+          if [ -z "$ALIAS_URL" ]; then
+            echo "::error::wrangler printed no URL for preview $ALIAS; the staging Worker has Preview URLs off until a staging deploy turns them on"
+            exit 1
+          fi
+          echo "url=$ALIAS_URL" >> "$GITHUB_OUTPUT"
+
+      # The bundle size wrangler prints, turned into a comment section. The
+      # baseline is best-effort: main may not have recorded one yet, and the
+      # script simply drops the "vs main" comparison when it is missing.
+      - name: Report worker size
+        # Best-effort: the comment says so when wrangler printed no size.
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          RUN_ID=$(gh run list --workflow staging-deploy.yml --branch main --status success \
+            --limit 1 --json databaseId --jq '.[0].databaseId // empty' || true)
+          if [ -n "$RUN_ID" ]; then
+            gh run download "$RUN_ID" --name worker-size-main --dir /tmp/baseline \
+              || echo "::notice::No worker-size-main artifact on run $RUN_ID — skipping the comparison against main"
+          fi
+          # `wrangler preview` prints no "Total Upload" line; a dry-run deploy of
+          # the same build does, without uploading anything.
+          (cd apps/backend && pnpm exec wrangler deploy --dry-run \
+            --config dist/worker/wrangler.generated.json) > /tmp/size.log 2>&1
+          BASELINE_FILE=/tmp/baseline/worker-size.json \
+            node scripts/worker-size-comment.mjs /tmp/size.log > /tmp/worker-size.md
+          cat /tmp/worker-size.md
+
+      # Build the comment body once and persist it as an artifact so that, when a
+      # branch is pushed BEFORE its PR exists, the PR-open workflow
+      # (preview-pr-comment.yml) can post this exact comment later.
+      - name: Build preview comment
+        run: |
+          set -euo pipefail
+          URL="${{ steps.upload.outputs.url }}"
+          BODY="Preview deployed for branch \`${{ steps.names.outputs.branch }}\` @ \`${GITHUB_SHA::7}\`.
+          - Preview URL (stable per branch): $URL
+          - Preview: \`${{ steps.names.outputs.alias }}\`
+          - D1: \`${{ steps.names.outputs.db_name }}\` (id: \`${{ steps.d1.outputs.id }}\`)
+          - Not routed to production traffic."
+          printf '%s\n\n' "$BODY" > /tmp/preview-comment.md
+          cat /tmp/worker-size.md >> /tmp/preview-comment.md 2>/dev/null || true
+
+      - name: Upload preview comment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-comment
+          path: /tmp/preview-comment.md
+          retention-days: 7
+
+      - name: Comment preview URL on PR
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          PR_NUMBER=$(gh pr list --head "${{ steps.names.outputs.branch }}" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open PR for branch — artifact saved; preview-pr-comment.yml will post it when the PR is opened"
+            exit 0
+          fi
+          gh pr comment "$PR_NUMBER" --body-file /tmp/preview-comment.md

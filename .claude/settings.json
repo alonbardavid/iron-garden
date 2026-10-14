@@ -1,0 +1,108 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(pnpm:*)",
+      "WebSearch",
+      "Bash(cat:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(echo *)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:security.snyk.io)",
+      "WebFetch(domain:bundlephobia.com)",
+      "Bash(pnpx turbo:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(pnpx wrangler d1*)",
+      "WebFetch(domain:code.claude.ai)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(pnpx playwright:*)",
+      "WebFetch(domain:github.blog)",
+      "WebFetch(domain:blog.cloudflare.com)",
+      "Bash(gh run list*)",
+      "Bash(gh run view*)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr view*)",
+      "Bash(gh issue list*)",
+      "Bash(gh issue view*)",
+      "Bash(sqlite3 *)",
+      "Bash(git mv *)",
+      "Bash(pnpx eslint *)",
+      "Bash(pnpx tsc *)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/setup-remote.sh",
+            "timeout": 600,
+            "statusMessage": "Installing dependencies & browsers..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Edit(*.tsx)",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.sh",
+            "timeout": 30,
+            "statusMessage": "Linting & checking conventions..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Write(*.tsx)",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.sh",
+            "timeout": 30,
+            "statusMessage": "Linting & checking conventions..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Edit(*.ts)",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.sh",
+            "timeout": 30,
+            "statusMessage": "Linting & checking conventions..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Write(*.ts)",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.sh",
+            "timeout": 30,
+            "statusMessage": "Linting & checking conventions..."
+          }
+        ]
+      }
+    ]
+  }
+}

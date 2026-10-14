@@ -1,0 +1,32 @@
+{
+  "name": "@lib/db-models",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./entity-ids": {
+      "types": "./dist/entity-ids.d.ts",
+      "default": "./dist/entity-ids.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@lib/logging": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "nanoid": "^5.1.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261008.1",
+    "typescript": "^5.3.3"
+  }
+}

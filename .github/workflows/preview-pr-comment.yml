@@ -1,0 +1,93 @@
+name: Preview Comment on PR Open
+
+# When a branch is pushed BEFORE its PR is opened, the "Preview Deploy"
+# workflow runs but has no PR to comment on, so the preview URL is lost. This
+# workflow fills that gap: on PR open, it looks up the latest preview run for the
+# head branch and posts the result — the uploaded preview comment on success, or
+# a failure notice if the preview deploy failed.
+
+on:
+  pull_request:
+    types: [opened]
+
+concurrency:
+  group: preview-pr-comment-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+jobs:
+  # Deploys need Cloudflare credentials. A copy without them (a fork, or one
+  # made by the Deploy to Cloudflare button, which deploys with Workers Builds
+  # instead) skips this workflow rather than failing it.
+  cloudflare:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "configured=$([ -n "$TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  comment:
+    needs: cloudflare
+    if: needs.cloudflare.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      BRANCH: ${{ github.head_ref }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      RUN_URL_BASE: ${{ github.server_url }}/${{ github.repository }}/actions/runs
+    steps:
+      - name: Find latest preview run for this branch
+        id: run
+        run: |
+          set -euo pipefail
+          RUNS=$(gh run list --workflow preview-deploy.yml --branch "$BRANCH" --limit 30 \
+            --json databaseId,headSha,status,conclusion)
+          # Prefer a run for the PR's head SHA; otherwise fall back to the most
+          # recent run for the branch (gh returns newest first).
+          RUN=$(printf '%s' "$RUNS" | jq -c --arg sha "$HEAD_SHA" \
+            '(map(select(.headSha == $sha)) + .) | .[0] // empty')
+          if [ -z "$RUN" ]; then
+            echo "No preview run found for branch $BRANCH — nothing to comment"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "id=$(printf '%s' "$RUN" | jq -r '.databaseId')" >> "$GITHUB_OUTPUT"
+          echo "status=$(printf '%s' "$RUN" | jq -r '.status')" >> "$GITHUB_OUTPUT"
+          echo "conclusion=$(printf '%s' "$RUN" | jq -r '.conclusion')" >> "$GITHUB_OUTPUT"
+
+      - name: Post comment based on preview result
+        if: steps.run.outputs.found == 'true'
+        run: |
+          set -euo pipefail
+          STATUS="${{ steps.run.outputs.status }}"
+          CONCLUSION="${{ steps.run.outputs.conclusion }}"
+          RUN_ID="${{ steps.run.outputs.id }}"
+          RUN_URL="$RUN_URL_BASE/$RUN_ID"
+
+          # Still running: the preview workflow itself will comment when it
+          # finishes, since the PR is now open. Nothing to do here.
+          if [ "$STATUS" != "completed" ]; then
+            echo "Preview run $RUN_ID is $STATUS — it will comment itself once done."
+            exit 0
+          fi
+
+          if [ "$CONCLUSION" = "success" ]; then
+            if gh run download "$RUN_ID" --name preview-comment --dir /tmp/pc 2>/dev/null; then
+              gh pr comment "$PR_NUMBER" --body-file /tmp/pc/preview-comment.md
+            else
+              gh pr comment "$PR_NUMBER" --body "Preview version was uploaded for \`$BRANCH\` (commit \`${HEAD_SHA:0:7}\`), but the preview details artifact is unavailable (it may have expired). See the [workflow run]($RUN_URL)."
+            fi
+          else
+            gh pr comment "$PR_NUMBER" --body "⚠️ The [preview version upload]($RUN_URL) for branch \`$BRANCH\` (commit \`${HEAD_SHA:0:7}\`) **$CONCLUSION**. Push a new commit to retry the preview deploy."
+          fi

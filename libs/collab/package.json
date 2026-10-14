@@ -1,0 +1,33 @@
+{
+  "name": "@lib/collab",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@lib/ai": "workspace:*",
+    "@lib/capabilities": "workspace:*",
+    "@lib/contract": "workspace:*",
+    "@lib/db-models": "workspace:*",
+    "@lib/forge": "workspace:*",
+    "@lib/git-host": "workspace:*",
+    "@lib/identity": "workspace:*",
+    "@lib/logging": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261008.1",
+    "typescript": "^5.3.3"
+  }
+}

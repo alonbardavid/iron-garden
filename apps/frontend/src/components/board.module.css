@@ -1,0 +1,77 @@
+.button:hover {
+  background: var(--cg-panel) !important;
+}
+
+.ghost:hover {
+  background: var(--cg-hover) !important;
+  color: var(--cg-ink) !important;
+}
+
+.icon:hover {
+  background: var(--cg-line) !important;
+  color: var(--cg-ink) !important;
+}
+
+.item:hover {
+  background: var(--cg-tint) !important;
+}
+
+.tab:hover {
+  color: var(--cg-ink) !important;
+  border-bottom-color: var(--cg-control) !important;
+}
+
+.primary:hover {
+  background: var(--cg-accent-fill-hover) !important;
+}
+
+.rail:hover {
+  background: var(--cg-accent-light) !important;
+}
+
+.box:hover {
+  outline: 2px solid var(--cg-accent-ring);
+  outline-offset: 0;
+}
+
+.ruled .chip {
+  display: none;
+}
+
+.ruled:hover .chip {
+  display: inline-flex;
+}
+
+.chip:hover {
+  border-color: var(--cg-accent-ring) !important;
+}
+
+.segment:hover {
+  color: var(--cg-ink) !important;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ruled .noteAdd {
+  opacity: 0;
+}
+
+.ruled:hover .noteAdd,
+.noteAdd:focus-visible {
+  opacity: 1;
+}
+
+/* A pointy-top hexagon, the nut of the mark: for avatars and monograms. */
+.hex {
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  border-radius: 0;
+}

@@ -1,0 +1,160 @@
+name: Preview Teardown
+
+on:
+  delete:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  # Deploys need Cloudflare credentials. A copy without them (a fork, or one
+  # made by the Deploy to Cloudflare button, which deploys with Workers Builds
+  # instead) skips this workflow rather than failing it.
+  cloudflare:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "configured=$([ -n "$TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  delete-on-branch-delete:
+    needs: cloudflare
+    if: needs.cloudflare.outputs.configured == 'true' && github.event_name == 'delete' && github.event.ref_type == 'branch' && github.event.ref != 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve Cloudflare account
+        id: cf
+        uses: ./.github/actions/cloudflare-env
+        with:
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          require-artifacts: "false"
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compute preview D1 and Worker Preview names
+        id: names
+        run: |
+          set -euo pipefail
+          BRANCH="${{ github.event.ref }}"
+          SANITIZED=$(printf '%s' "$BRANCH" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's/[^a-z0-9-]/-/g; s/--*/-/g; s/^-//; s/-$//' \
+            | cut -c1-34 \
+            | sed 's/-$//')
+          HASH=$(printf '%s' "$BRANCH" | sha1sum | cut -c1-6)
+          DB_NAME="iron-garden-preview-${SANITIZED}-${HASH}"
+          # The Worker Preview's name, computed as preview-deploy.yml does.
+          ALIAS="br-$(printf '%s' "$SANITIZED" | cut -c1-30 | sed 's/-$//')-${HASH}"
+          echo "db_name=$DB_NAME" >> "$GITHUB_OUTPUT"
+          echo "alias=$ALIAS" >> "$GITHUB_OUTPUT"
+
+      # Also deletes the preview's Durable Object storage.
+      - name: Delete Worker Preview
+        continue-on-error: true
+        run: |
+          pnpm --filter @app/backend exec wrangler preview delete \
+            --name "${{ steps.names.outputs.alias }}" \
+            --worker-name iron-garden-staging \
+            --skip-confirmation
+
+      - name: Delete preview D1
+        continue-on-error: true
+        run: pnpm --filter @app/backend exec wrangler d1 delete "${{ steps.names.outputs.db_name }}" --skip-confirmation
+
+      - name: Delete preview git repositories
+        if: steps.cf.outputs.artifacts == 'true'
+        continue-on-error: true
+        run: node scripts/artifacts-repos.mjs clear "${{ steps.names.outputs.db_name }}"
+
+  prune-orphans:
+    needs: cloudflare
+    if: needs.cloudflare.outputs.configured == 'true' && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve Cloudflare account
+        id: cf
+        uses: ./.github/actions/cloudflare-env
+        with:
+          api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          require-artifacts: "false"
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build active preview D1 names from live branches
+        run: |
+          set -euo pipefail
+          : > /tmp/active.txt
+          gh api -X GET "repos/${{ github.repository }}/branches?per_page=100" --paginate --jq '.[].name' \
+            | while read -r B; do
+                [ -z "$B" ] && continue
+                [ "$B" = "main" ] && continue
+                SAN=$(printf '%s' "$B" \
+                  | tr '[:upper:]' '[:lower:]' \
+                  | sed 's/[^a-z0-9-]/-/g; s/--*/-/g; s/^-//; s/-$//' \
+                  | cut -c1-34 \
+                  | sed 's/-$//')
+                HASH=$(printf '%s' "$B" | sha1sum | cut -c1-6)
+                echo "iron-garden-preview-${SAN}-${HASH}" >> /tmp/active.txt
+              done
+
+      - name: Prune orphan preview D1s
+        run: |
+          set -euo pipefail
+          PREVIEW_DBS=$(pnpm --silent --filter @app/backend exec wrangler d1 list --json \
+            | jq -r '.[] | select(.name | startswith("iron-garden-preview-")) | .name')
+          for DB in $PREVIEW_DBS; do
+            if grep -qx "$DB" /tmp/active.txt; then
+              continue
+            fi
+            echo "Pruning orphan: $DB"
+            pnpm --filter @app/backend exec wrangler d1 delete "$DB" --skip-confirmation || true
+          done
+
+      # A preview's Artifacts namespace is named after its D1.
+      - name: Prune orphan preview git repositories
+        if: steps.cf.outputs.artifacts == 'true'
+        run: |
+          set -euo pipefail
+          PREVIEW_NAMESPACES=$(pnpm --silent --filter @app/backend exec wrangler artifacts namespaces list --json \
+            | jq -r '.[] | select(.namespace | startswith("iron-garden-preview-")) | select((.repo_count // 0 | tonumber) > 0) | .namespace')
+          for NS in $PREVIEW_NAMESPACES; do
+            if grep -qx "$NS" /tmp/active.txt; then
+              continue
+            fi
+            echo "Pruning orphan git repositories: $NS"
+            node scripts/artifacts-repos.mjs clear "$NS" || true
+          done

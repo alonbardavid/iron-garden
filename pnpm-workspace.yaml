@@ -1,0 +1,5 @@
+packages:
+  - 'apps/*'
+  - 'libs/*'
+  - 'tests'
+minimumReleaseAge: 2880
