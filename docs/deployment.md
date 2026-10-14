@@ -38,7 +38,7 @@ What differs between instances lives in GitHub repo variables, read by the deplo
 | ----------- | -------------------- | -------------------------------------------------------------------------------- |
 | `PROD_HOST` | production, optional | Production hostname, no scheme; unset uses `iron-garden.<subdomain>.workers.dev` |
 
-Local `pnpm deploy` and `pnpm db:migrate:remote` read the same names from the shell.
+Local `pnpm run deploy` and `pnpm db:migrate:remote` read the same names from the shell.
 
 Each Worker also reads two secrets, set with `wrangler secret put`: `BETTER_AUTH_SECRET`, and
 `SETUP_TOKEN` (4 characters or more), which unlocks the first-run form until the first admin
@@ -95,7 +95,30 @@ current; preview versions on the same Worker are pinned to their aliases and una
 never creates it, so a misconfigured deploy cannot come up against an empty database. A
 `PROD_HOST` hostname is attached to the `iron-garden` Worker as a
 custom domain in Cloudflare; the deploy does not create the route. Locally,
-`pnpm deploy` and `pnpm db:migrate:remote` build, then use `pnpm gen:prod-config`.
+`pnpm run deploy` and `pnpm db:migrate:remote` build, then take the button's path below.
+
+## Deploy to Cloudflare button
+
+The README's button deploys a production instance with
+[Workers Builds](https://developers.cloudflare.com/workers/platform/deploy-buttons/), no
+GitHub Actions involved. It reads the root `wrangler.jsonc` (the Worker `iron-garden` and
+its D1 `iron-garden-prod`), the secrets in `.dev.vars.example` and their descriptions under
+`cloudflare.bindings` in `package.json`; it lets the user rename the Worker and the database,
+creates the database and writes its id into the root `wrangler.jsonc` of their copy. That
+file is not deployed itself, since the build emits the real config.
+
+Workers Builds runs `pnpm run build`, then `pnpm run deploy` (never `pnpm deploy`, pnpm's own
+command), which runs `scripts/deploy-production.mjs`. It takes the name and database from the
+root `wrangler.jsonc`, resolves the database by id, else by name, creating it when missing,
+generates the production config as `gen-wrangler-config.mjs` does, applies migrations and
+deploys. Its origin is `https://$PROD_HOST` when that build variable is set, else the
+Worker's workers.dev address, read through the build's `CLOUDFLARE_API_TOKEN`. Run by hand,
+it needs one of the two in the shell.
+
+Leave Workers Builds' non-production branch builds off: their default command deploys the
+root `wrangler.jsonc` directly, which cannot build this app. The GitHub workflows skip
+in a copy without the `CLOUDFLARE_API_TOKEN` secret, so the two never deploy the same Worker
+unless that secret is added.
 
 ## Renaming the instance
 
@@ -103,7 +126,7 @@ Every Cloudflare resource is named after the product (`iron-garden`, `iron-garde
 the D1s and Artifacts namespaces of the same names, and the preview resources prefixed
 `iron-garden-preview-`), so a rename is a migration of live resources, not a text change.
 The code side is the names in `scripts/lib/environments.mjs`, the four workflows,
-`gen:prod-config` in `package.json`, `apps/backend/wrangler.jsonc` and this document. Cut
+the root `wrangler.jsonc`, `apps/backend/wrangler.jsonc` and this document. Cut
 over in this order, with no pull request processing and no agent session running: a
 processing job lives in a Durable Object on the old Worker, and a session's prompt carries
 the old origin's URLs.

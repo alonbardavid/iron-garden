@@ -32,6 +32,7 @@ export default defineConfig(
         console: "readonly",
         process: "readonly",
         URL: "readonly",
+        fetch: "readonly",
       },
     },
   },

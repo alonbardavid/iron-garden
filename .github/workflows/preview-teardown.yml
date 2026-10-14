@@ -9,8 +9,22 @@ permissions:
   contents: read
 
 jobs:
+  # Deploys need Cloudflare credentials. A copy without them (a fork, or one
+  # made by the Deploy to Cloudflare button, which deploys with Workers Builds
+  # instead) skips this workflow rather than failing it.
+  cloudflare:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "configured=$([ -n "$TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
   delete-on-branch-delete:
-    if: github.event_name == 'delete' && github.event.ref_type == 'branch' && github.event.ref != 'main'
+    needs: cloudflare
+    if: needs.cloudflare.outputs.configured == 'true' && github.event_name == 'delete' && github.event.ref_type == 'branch' && github.event.ref != 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -72,7 +86,8 @@ jobs:
         run: node scripts/artifacts-repos.mjs clear "${{ steps.names.outputs.db_name }}"
 
   prune-orphans:
-    if: github.event_name == 'schedule'
+    needs: cloudflare
+    if: needs.cloudflare.outputs.configured == 'true' && github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

@@ -22,9 +22,9 @@
     "test": "pnpm --filter tests test",
     "email:dev": "email dev --dir emails --port 3100",
     "db:migrate": "pnpm --filter @app/backend exec wrangler d1 migrations apply DB",
-    "gen:prod-config": "TARGET=production DEPLOY_ORIGIN=https://$PROD_HOST DB_NAME=iron-garden-prod DB_ID=$(pnpm --silent --filter @app/backend exec wrangler d1 info iron-garden-prod --json | jq -r .uuid) node scripts/gen-wrangler-config.mjs",
-    "db:migrate:remote": "pnpm build && pnpm gen:prod-config && pnpm --filter @app/backend exec wrangler d1 migrations apply DB --config dist/worker/wrangler.generated.production.json --remote",
-    "deploy": "pnpm build && pnpm gen:prod-config && pnpm --filter @app/backend exec wrangler deploy --config dist/worker/wrangler.generated.production.json",
+    "gen:prod-config": "node scripts/deploy-production.mjs config",
+    "db:migrate:remote": "pnpm build && node scripts/deploy-production.mjs migrate",
+    "deploy": "pnpm build && node scripts/deploy-production.mjs deploy",
     "type-check": "turbo run type-check",
     "clean": "turbo run clean && rm -rf node_modules",
     "lint": "eslint .",
@@ -60,6 +60,19 @@
   "lint-staged": {
     "*.{ts,tsx,js,mjs}": "eslint --fix",
     "*.{ts,tsx,js,mjs,json,css,md}": "prettier --write"
+  },
+  "cloudflare": {
+    "bindings": {
+      "BETTER_AUTH_SECRET": {
+        "description": "Any long random string, e.g. from `openssl rand -hex 32`. It signs sessions and encrypts stored GitHub tokens, so keep it stable."
+      },
+      "SETUP_TOKEN": {
+        "description": "Any random string of 4 characters or more. You enter it once, on the first visit, to create the first admin."
+      },
+      "DB": {
+        "description": "The database: users, repositories' metadata, pull requests and reviews."
+      }
+    }
   },
   "pnpm": {
     "//:kysley": "Kysley is referenced but not used by better-auth, and newwer versions have import errors in cloudflare",

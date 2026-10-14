@@ -14,7 +14,9 @@ const migrationsDir = resolve(here, "../migrations");
 const target = requireEnv("TARGET");
 const environment = environmentFor(target);
 const OVERRIDES = {
-  name: environment.workerName,
+  // WORKER_NAME renames the Worker; scripts/deploy-production.mjs passes the
+  // name from the root wrangler.jsonc, which the Deploy button may have changed.
+  name: process.env.WORKER_NAME || environment.workerName,
   databaseName: requireEnv("DB_NAME"),
   databaseId: requireEnv("DB_ID"),
   frontendCanonicalBaseUrl: origin(requireEnv("DEPLOY_ORIGIN")),

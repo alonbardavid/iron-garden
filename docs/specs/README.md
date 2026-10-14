@@ -8,7 +8,7 @@ they are working on, get told about collisions and relevant merges, and talk to 
 and **review happens per line, not per file** (related lines are grouped, moved and precedent
 code is linked, rules auto-review the routine and escalate the risky). One person or team
 deploys it to their own Cloudflare account with one button. It starts from the
-[edge-stack](https://github.com/alonbardavid/alonbd-skills) template and stores git in
+[edge-stack](https://github.com/alonbardavid/edge-stack) template and stores git in
 Cloudflare Artifacts.
 
 Status: **draft, awaiting decisions** (see below). License: MIT.
