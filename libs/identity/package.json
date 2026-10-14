@@ -1,0 +1,37 @@
+{
+  "name": "@lib/identity",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@better-auth/api-key": "^1.7.7",
+    "@lib/capabilities": "workspace:*",
+    "@lib/contract": "workspace:*",
+    "@lib/db-models": "workspace:*",
+    "@lib/email-ds": "workspace:*",
+    "@lib/email-service": "workspace:*",
+    "@lib/logging": "workspace:*",
+    "@react-email/components": "^1.0.12",
+    "better-auth": "^1.7.7",
+    "drizzle-orm": "^0.45.1",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261008.1",
+    "@types/react": "^18.3.1",
+    "typescript": "^5.3.3"
+  }
+}

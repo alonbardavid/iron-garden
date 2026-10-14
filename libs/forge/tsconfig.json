@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "types": ["@cloudflare/workers-types"],
+    "lib": ["ES2022", "ESNext.Disposable"]
+  },
+  "references": [
+    { "path": "../capabilities" },
+    { "path": "../db-models" },
+    { "path": "../git-host" },
+    { "path": "../identity" },
+    { "path": "../logging" }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

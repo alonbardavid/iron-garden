@@ -1,0 +1,40 @@
+{
+  "name": "@app/backend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && node ../../scripts/assemble-assets.mjs && vite build",
+    "dev": "vite dev",
+    "dev:ci": "vite dev",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist public .wrangler *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@lib/ai": "workspace:*",
+    "@lib/capabilities": "workspace:*",
+    "@lib/collab": "workspace:*",
+    "@lib/contract": "workspace:*",
+    "@lib/db-models": "workspace:*",
+    "@lib/email-service": "workspace:*",
+    "@lib/forge": "workspace:*",
+    "@lib/git-host": "workspace:*",
+    "@lib/github": "workspace:*",
+    "@lib/identity": "workspace:*",
+    "@lib/logging": "workspace:*",
+    "@lib/review": "workspace:*",
+    "@lib/server-commons": "workspace:*",
+    "@orpc/openapi": "1.15.4",
+    "@orpc/server": "1.15.4",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@app/frontend": "workspace:*",
+    "@cloudflare/vite-plugin": "^1.63.1",
+    "@cloudflare/workers-types": "^5.20261008.1",
+    "typescript": "^5.3.3",
+    "vite": "^7.1.0",
+    "wrangler": "^4.149.0"
+  }
+}

@@ -1,0 +1,78 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "iron-garden-local",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-02-13",
+	"compatibility_flags": [
+		"nodejs_compat",
+		// Keeps an Artifacts error's `code` across the binding's RPC boundary;
+		// without it every git storage refusal arrives as a bare Error.
+		"enhanced_error_serialization"
+	],
+	// No "directory": vite build sets it to its client output (dist/client).
+	"assets": {
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*",
+			"/*.git/*"
+		]
+	},
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"invocation_logs": true,
+			"head_sampling_rate": 1
+		}
+	},
+	// Never add a database_id: scripts/gen-wrangler-config.mjs injects one
+	// per deploy target.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "iron-garden-local",
+			"migrations_dir": "../../migrations"
+		}
+	],
+	// One object per chat channel (an agent's open sockets and waiting polls),
+	// and one per pull request (the revision waiting for the server to group
+	// it, run from an alarm).
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "CHAT_CHANNELS",
+				"class_name": "ChatChannelObject"
+			},
+			{
+				"name": "PROCESSING",
+				"class_name": "PullRequestProcessor"
+			}
+		]
+	},
+	// Declares each Durable Object class; Cloudflare reconciles the list on deploy.
+	"exports": {
+		"ChatChannelObject": { "type": "durable-object", "storage": "sqlite" },
+		"PullRequestProcessor": { "type": "durable-object", "storage": "sqlite" }
+	},
+	// Local dev only simulates sends: .eml files land under
+	// <os-tmpdir>/miniflare-*/email/, which the e2e inbox helper reads.
+	"send_email": [
+		{
+			"name": "SEND_EMAIL"
+		}
+	],
+	// Server-side processing (Admin > Agent config). Local dev simulates the
+	// loader and the PROCESSING Durable Object. Workers AI is remote-only, so
+	// local dev binds it only with WORKERS_AI=true (see vite.config.ts); every
+	// deploy adds it (scripts/gen-wrangler-config.mjs).
+	"worker_loaders": [
+		{
+			"binding": "LOADER"
+		}
+	],
+	"vars": {
+		"FRONTEND_CANONICAL_BASE_URL": "http://localhost:5173",
+		"BETTER_AUTH_SECRET": "local-dev-secret-please-change-3f9a1c7d8e2b4506",
+		"SETUP_TOKEN": "local-dev-setup-token-7c41e9a2b85d"
+	}
+}

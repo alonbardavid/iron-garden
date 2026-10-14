@@ -1,0 +1,45 @@
+{
+  "name": "@app/frontend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev:vite": "vite --port 5173",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "@lib/contract": "workspace:*",
+    "@lib/diff": "workspace:*",
+    "@lib/ds": "workspace:*",
+    "@mantine/core": "^8.3.14",
+    "@mantine/form": "^8.3.14",
+    "@mantine/hooks": "^8.3.14",
+    "@mantine/notifications": "^8.3.14",
+    "@orpc/client": "1.15.4",
+    "@orpc/openapi-client": "1.15.4",
+    "@orpc/tanstack-query": "1.15.4",
+    "@tanstack/react-query": "^5.96.2",
+    "better-auth": "^1.7.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "10.1.0",
+    "react-router-dom": "^7.13.1",
+    "remark-gfm": "4.0.1",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "postcss": "^8.5.9",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0"
+  }
+}

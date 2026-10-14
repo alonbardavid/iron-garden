@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="4.5 7.8 23 23">
+  <!-- The mark with a shorter stalk, so the leaves sit just above the nut and the frame can hug it. -->
+  <defs>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C0C8D0"/>
+      <stop offset="1" stop-color="#6B7681"/>
+    </linearGradient>
+  </defs>
+  <path d="M16 10.5 24.5 15.4v9.8L16 30.1 7.5 25.2v-9.8z" fill="url(#steel)"/>
+  <circle cx="16" cy="20" r="3.4" fill="#F2F4F6"/>
+  <path d="M16 20v-6.8" stroke="#3D8438" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <path d="M0 0C0-5.5 3.5-9 9-9 9-3.5 5.5 0 0 0z" fill="#3D8438" transform="translate(16 13.6) rotate(25) scale(.7)"/>
+  <path d="M0 0C0-5.5 3.5-9 9-9 9-3.5 5.5 0 0 0z" fill="#3D8438" transform="translate(16 15.8) rotate(-115) scale(.62)"/>
+</svg>

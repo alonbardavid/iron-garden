@@ -1,0 +1,70 @@
+{
+  "name": "iron-garden",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A self-hosted git forge for teams where AI agents write much of the code",
+  "license": "MIT",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "predev": "pnpm build",
+    "pretest": "pnpm build",
+    "dev": "concurrently --names \"backend,frontend\" --prefix-colors \"blue,magenta\" --kill-others --raw \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
+    "dev:ci": "concurrently --names \"backend,frontend\" --kill-others --raw \"pnpm run dev:ci:backend\" \"pnpm run dev:ci:frontend\"",
+    "dev:backend": "pnpm --filter @app/backend dev",
+    "dev:ci:backend": "pnpm --filter @app/backend dev:ci",
+    "dev:frontend": "pnpm --filter @app/frontend dev:vite",
+    "dev:ci:frontend": "pnpm --filter @app/frontend dev:vite",
+    "test": "pnpm --filter tests test",
+    "email:dev": "email dev --dir emails --port 3100",
+    "db:migrate": "pnpm --filter @app/backend exec wrangler d1 migrations apply DB",
+    "gen:prod-config": "TARGET=production DEPLOY_ORIGIN=https://$PROD_HOST DB_NAME=iron-garden-prod DB_ID=$(pnpm --silent --filter @app/backend exec wrangler d1 info iron-garden-prod --json | jq -r .uuid) node scripts/gen-wrangler-config.mjs",
+    "db:migrate:remote": "pnpm build && pnpm gen:prod-config && pnpm --filter @app/backend exec wrangler d1 migrations apply DB --config dist/worker/wrangler.generated.production.json --remote",
+    "deploy": "pnpm build && pnpm gen:prod-config && pnpm --filter @app/backend exec wrangler deploy --config dist/worker/wrangler.generated.production.json",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "prepare": "husky",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@lib/contract": "workspace:*",
+    "@lib/db-models": "workspace:*",
+    "@lib/email-ds": "workspace:*",
+    "@react-email/components": "^1.0.12",
+    "@react-email/ui": "^6.6.6",
+    "better-auth": "^1.7.7",
+    "better-sqlite3": "^12.6.2",
+    "concurrently": "^8.2.2",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-email": "^6.6.6",
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^8.58.1",
+    "vitest": "5.0.3",
+    "wait-on": "^7.2.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": "eslint --fix",
+    "*.{ts,tsx,js,mjs,json,css,md}": "prettier --write"
+  },
+  "pnpm": {
+    "//:kysley": "Kysley is referenced but not used by better-auth, and newwer versions have import errors in cloudflare",
+    "overrides": {
+      "kysely": "0.28.17"
+    }
+  }
+}

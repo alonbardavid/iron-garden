@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "types": ["@cloudflare/workers-types"],
+    "lib": ["ES2022", "ESNext.Disposable"]
+  },
+  "references": [
+    {
+      "path": "../logging"
+    }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/testing/**"]
+}

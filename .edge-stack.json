@@ -1,0 +1,9 @@
+{
+  "stack": "edge-stack",
+  "name": "iron-garden",
+  "createdWith": "0.1.0",
+  "capabilities": {
+    "base": "0.2.0",
+    "email-sending": "0.2.0"
+  }
+}

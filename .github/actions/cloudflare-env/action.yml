@@ -1,0 +1,131 @@
+name: Resolve Cloudflare environment
+description: >-
+  Resolve the Cloudflare account id (and optionally the workers.dev subdomain)
+  from a Cloudflare API token, so neither has to be configured by hand. Exports
+  CLOUDFLARE_ACCOUNT_ID to the job environment for every later wrangler step.
+  CI needs only the CLOUDFLARE_API_TOKEN secret plus the instance's own repo
+  variable (PROD_HOST, optional): derive anything else a deploy
+  needs here instead of adding one.
+
+inputs:
+  api-token:
+    description: Cloudflare API token (the CLOUDFLARE_API_TOKEN repo secret).
+    required: true
+  account-id:
+    description: >-
+      Optional override. Only needed when the token can see more than one
+      account — otherwise the account is derived from the token.
+    required: false
+    default: ""
+  resolve-subdomain:
+    description: Set to "true" to also resolve the account's workers.dev subdomain.
+    required: false
+    default: "false"
+  require-artifacts:
+    description: >-
+      "true" (the default) fails the job when the token cannot use Cloudflare
+      Artifacts: every deploy needs git hosting. Teardown sets "false" so it can
+      still delete a preview's D1.
+    required: false
+    default: "true"
+
+outputs:
+  account_id:
+    description: The resolved Cloudflare account id.
+    value: ${{ steps.resolve.outputs.account_id }}
+  subdomain:
+    description: The account's workers.dev subdomain (empty unless resolve-subdomain was "true").
+    value: ${{ steps.resolve.outputs.subdomain }}
+  artifacts:
+    description: >-
+      "true" when the token can use Cloudflare Artifacts (git hosting), else
+      "false" (only possible with require-artifacts "false").
+    value: ${{ steps.resolve.outputs.artifacts }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve account and subdomain
+      id: resolve
+      shell: bash
+      env:
+        CF_API_TOKEN: ${{ inputs.api-token }}
+        CF_ACCOUNT_ID_OVERRIDE: ${{ inputs.account-id }}
+        CF_RESOLVE_SUBDOMAIN: ${{ inputs.resolve-subdomain }}
+        CF_REQUIRE_ARTIFACTS: ${{ inputs.require-artifacts }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$CF_API_TOKEN" ]; then
+          echo "::error::CLOUDFLARE_API_TOKEN is not set. Add it as a repo secret."
+          exit 1
+        fi
+
+        # The account id is derived from the token: a token scoped to a single
+        # account (the normal case) needs no configuration at all. The override
+        # exists only for tokens that can see several accounts.
+        if [ -n "$CF_ACCOUNT_ID_OVERRIDE" ]; then
+          ACCOUNT_ID="$CF_ACCOUNT_ID_OVERRIDE"
+          echo "Using the CLOUDFLARE_ACCOUNT_ID override: $ACCOUNT_ID"
+        else
+          ACCOUNTS=$(curl -fsS \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts?per_page=50")
+          COUNT=$(printf '%s' "$ACCOUNTS" | jq '.result | length')
+          case "$COUNT" in
+            1)
+              ACCOUNT_ID=$(printf '%s' "$ACCOUNTS" | jq -r '.result[0].id')
+              echo "Resolved Cloudflare account from the API token: $ACCOUNT_ID"
+              ;;
+            0)
+              echo "::error::The Cloudflare API token has access to no accounts. Check that it is valid and account-scoped."
+              exit 1
+              ;;
+            *)
+              echo "The API token can see $COUNT accounts:"
+              printf '%s' "$ACCOUNTS" | jq -r '.result[] | "  - \(.name) (\(.id))"'
+              echo "::error::Cannot derive the Cloudflare account: the token sees $COUNT accounts. Set the CLOUDFLARE_ACCOUNT_ID repo secret to pick one, or scope the token to a single account."
+              exit 1
+              ;;
+          esac
+        fi
+
+        # Export for every later wrangler step in the job.
+        echo "CLOUDFLARE_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+        echo "account_id=$ACCOUNT_ID" >> "$GITHUB_OUTPUT"
+
+        SUBDOMAIN=""
+        if [ "$CF_RESOLVE_SUBDOMAIN" = "true" ]; then
+          SUBDOMAIN=$(curl -fsS \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/workers/subdomain" \
+            | jq -r '.result.subdomain // empty')
+          if [ -z "$SUBDOMAIN" ]; then
+            echo "::error::Could not resolve workers.dev subdomain from the Cloudflare API"
+            exit 1
+          fi
+          echo "Resolved workers.dev subdomain: $SUBDOMAIN"
+        fi
+        echo "subdomain=$SUBDOMAIN" >> "$GITHUB_OUTPUT"
+
+        # Git hosting needs Workers Paid and a token with Artifacts: Edit, and
+        # no deploy goes out without it. A refusal can be momentary, so the
+        # probe is tried a few times before it counts.
+        ARTIFACTS_STATUS=""
+        for ATTEMPT in 1 2 3; do
+          ARTIFACTS_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/artifacts/namespaces?limit=1" || true)
+          [ "$ARTIFACTS_STATUS" = "200" ] && break
+          echo "Artifacts probe attempt $ATTEMPT answered HTTP $ARTIFACTS_STATUS"
+          [ "$ATTEMPT" -lt 3 ] && sleep 5
+        done
+        if [ "$ARTIFACTS_STATUS" = "200" ]; then
+          echo "artifacts=true" >> "$GITHUB_OUTPUT"
+        elif [ "$CF_REQUIRE_ARTIFACTS" = "true" ]; then
+          echo "::error::The Cloudflare API token cannot use Artifacts (HTTP $ARTIFACTS_STATUS). Every deploy needs git hosting: give the token Artifacts: Edit on a Workers Paid account."
+          exit 1
+        else
+          echo "::notice::The Cloudflare API token cannot use Artifacts (HTTP $ARTIFACTS_STATUS); skipping git repository cleanup."
+          echo "artifacts=false" >> "$GITHUB_OUTPUT"
+        fi
