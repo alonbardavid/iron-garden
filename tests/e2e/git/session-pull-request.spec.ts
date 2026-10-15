@@ -36,7 +36,9 @@ test("an agent starts a session, pushes a branch and groups its pull request", a
     );
     expect(started.git.baseCommit).toMatch(/^[0-9a-f]{40}$/);
     expect(started.instructions).toContain(started.links.pullRequests);
-    expect(started.instructions).toContain("## 4. Share your transcript");
+    expect(started.instructions).toContain(
+      "## 6. Share your transcript as you go",
+    );
 
     // Claude outlines its work instead of handing over a transcript.
     const claude = await json<StartedSession>(
@@ -45,9 +47,7 @@ test("an agent starts a session, pushes a branch and groups its pull request", a
         data: { repository, client: "claude-code", title: "Outline" },
       }),
     );
-    expect(claude.instructions).toContain(
-      "## 4. Outline how you made each commit",
-    );
+    expect(claude.instructions).toContain("## 6. Outline your work as you go");
     expect(claude.instructions).not.toContain("Share your transcript");
 
     const work = clone(started.git.remote, started.git.token);

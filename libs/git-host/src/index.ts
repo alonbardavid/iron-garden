@@ -24,6 +24,7 @@ export {
 } from "./tree-diff";
 export { trailersOf, MAX_BRANCH_COMMITS } from "./commits";
 export { proxyGit, gitServiceOf, type GitService } from "./proxy";
+export { pushedBranches, type PushedBranch } from "./receive-pack";
 
 export {
   mirrorBranches,

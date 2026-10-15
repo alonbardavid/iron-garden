@@ -8,6 +8,7 @@ export const RULE_ACTIONS = [
   "high-impact",
   "require-review",
   "run-workflow",
+  "mark-exclusive",
 ] as const;
 export type RuleAction = (typeof RULE_ACTIONS)[number];
 

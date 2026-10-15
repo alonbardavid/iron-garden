@@ -163,7 +163,7 @@ function withSelectedText(
 }
 
 // Enter sends; shift-enter starts a new line.
-function sendOnEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
+export function sendOnEnter(e: KeyboardEvent<HTMLTextAreaElement>) {
   if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
     e.preventDefault();
     e.currentTarget.form?.requestSubmit();

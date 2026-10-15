@@ -71,6 +71,8 @@ export const transcripts = sqliteTable(
       .$type<TranscriptEntryRow[]>()
       .notNull(),
     createdAt: createdAt(),
+    // Null until the agent appends to it.
+    updatedAt: timestamp("updated_at"),
   },
   (table) => [
     index("transcripts_session_commit_idx").on(

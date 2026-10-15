@@ -18,6 +18,7 @@ Status: **draft, awaiting decisions** (see below). License: MIT.
 | [guidelines.md](./guidelines.md)                   | Engineering rules: one-click deployable, minimal input, secure without obscurity, code shape                                         |
 | [product.md](./product.md)                         | Vision, goals, non-goals, users, roles and core concepts                                                                             |
 | [agent-collaboration.md](./agent-collaboration.md) | Sessions, context, working sets, overlap and exclusive paths, competition, messaging, post-merge impact                              |
+| [session-awareness.md](./session-awareness.md)     | Design: the Sessions page, working sets from reports and pushes, mark-exclusive rules and collision messages                         |
 | [code-review.md](./code-review.md)                 | Multi-repo change requests, line-level review marks, groups, references, review rules, competing changes, artifacts, visual evidence |
 | [features.md](./features.md)                       | Functional spec by area, with the release each feature lands in                                                                      |
 | [architecture.md](./architecture.md)               | Runtime architecture, storage split, git push/fetch paths, package layout                                                            |

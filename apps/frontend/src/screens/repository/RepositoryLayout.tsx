@@ -9,6 +9,7 @@ import { NavTab, TabCount } from "../../components/NavTabs";
 import {
   CodeIcon,
   PullRequestsIcon,
+  SessionsIcon,
   SettingsIcon,
   WorkflowsIcon,
 } from "../../components/icons";
@@ -26,8 +27,8 @@ export function useRepository(): RepositoryDetail {
   return repository;
 }
 
-// Header, Code / Pull requests / Workflows / Settings tabs, and the repository for the
-// screens below.
+// Header, Sessions / Code / Pull requests / Workflows / Settings tabs, and the
+// repository for the screens below.
 export const RepositoryLayout = () => {
   const { name = "" } = useParams();
   const { data: repository, error } = useQuery(
@@ -59,17 +60,8 @@ export const RepositoryLayout = () => {
 };
 
 const RepositoryTabs = ({ repository }: { repository: RepositoryDetail }) => {
-  const { pathname } = useLocation();
   const base = `/r/${repository.name}`;
-  const current = (["pulls", "workflows", "settings"] as const).find((tab) =>
-    pathname.startsWith(`${base}/${tab}`),
-  );
-  const { data: pullRequests } = useQuery(
-    orpc.pullRequests.list.queryOptions({ input: { name: repository.name } }),
-  );
-  const open = pullRequests?.filter(
-    (pr) => pr.status === "open" || pr.status === "processing",
-  ).length;
+  const current = useCurrentTab(base);
   return (
     <Group
       component="nav"
@@ -78,19 +70,14 @@ const RepositoryTabs = ({ repository }: { repository: RepositoryDetail }) => {
       px={24}
       style={{ borderBottom: `1px solid ${palette.control}` }}
     >
+      <SessionsTab base={base} current={current === "sessions"} />
       <NavTab
-        to={base}
+        to={`${base}/code`}
         icon={<CodeIcon />}
         label="Code"
-        current={current === undefined}
+        current={current === "code"}
       />
-      <NavTab
-        to={`${base}/pulls`}
-        icon={<PullRequestsIcon />}
-        label="Pull requests"
-        badge={open !== undefined && <TabCount n={open} />}
-        current={current === "pulls"}
-      />
+      <PullRequestsTab base={base} current={current === "pulls"} />
       <WorkflowsTab base={base} current={current === "workflows"} />
       {repository.level === "admin" && (
         <NavTab
@@ -101,6 +88,66 @@ const RepositoryTabs = ({ repository }: { repository: RepositoryDetail }) => {
         />
       )}
     </Group>
+  );
+};
+
+const SECTIONS = [
+  ["code", "code"],
+  ["commits", "code"],
+  ["pulls", "pulls"],
+  ["workflows", "workflows"],
+  ["settings", "settings"],
+] as const;
+
+// The tab the page is under: sessions unless it is in another section.
+function useCurrentTab(base: string) {
+  const { pathname } = useLocation();
+  const section = SECTIONS.find(([path]) =>
+    pathname.startsWith(`${base}/${path}`),
+  );
+  return section ? section[1] : "sessions";
+}
+
+// Always there, even before any session; counts the live ones.
+const SessionsTab = ({ base, current }: { base: string; current: boolean }) => {
+  const { name } = useRepository();
+  const { data: sessions } = useQuery(
+    orpc.repositories.sessions.list.queryOptions({ input: { name } }),
+  );
+  const live = sessions?.filter((session) => session.live).length;
+  return (
+    <NavTab
+      to={base}
+      icon={<SessionsIcon />}
+      label="Sessions"
+      badge={live ? <TabCount n={live} /> : null}
+      current={current}
+    />
+  );
+};
+
+const PullRequestsTab = ({
+  base,
+  current,
+}: {
+  base: string;
+  current: boolean;
+}) => {
+  const { name } = useRepository();
+  const { data: pullRequests } = useQuery(
+    orpc.pullRequests.list.queryOptions({ input: { name } }),
+  );
+  const open = pullRequests?.filter(
+    (pr) => pr.status === "open" || pr.status === "processing",
+  ).length;
+  return (
+    <NavTab
+      to={`${base}/pulls`}
+      icon={<PullRequestsIcon />}
+      label="Pull requests"
+      badge={open !== undefined && <TabCount n={open} />}
+      current={current}
+    />
   );
 };
 

@@ -4,8 +4,13 @@ import {
   agents,
   repositories,
   newEntityId,
+  and,
   eq,
   getTableColumns,
+  isNull,
+  lt,
+  or,
+  type SessionContact,
   type SessionStatus,
 } from "@lib/db-models";
 import {
@@ -18,12 +23,18 @@ import {
 import { getGitHost, type GitToken } from "@lib/git-host";
 import { getAgent, type AgentPrincipal, type Principal } from "@lib/identity";
 import { moduleLogger } from "@lib/logging";
-import { groupsOnServer } from "@lib/ai";
+import { groupsOnServer, sessionMessagingOn } from "@lib/ai";
+import { inbox } from "./inbox";
+import { rekeyListener } from "./listener";
+import { returnUndelivered } from "./messages";
 import { sessionInstructions, type SessionLinks } from "./session-prompt";
+import { releaseOnEnd } from "./working-set";
 
 const log = moduleLogger("collab/sessions");
 
 const SESSION_TOKEN_TTL_SECONDS = 8 * 60 * 60;
+
+const SEEN_WRITE_MS = 60_000;
 
 export interface Session {
   id: string;
@@ -41,6 +52,7 @@ export interface Session {
   // What the agent named itself when it started the session, or else the
   // user agent it started it with.
   client: string | null;
+  contact: SessionContact[];
   createdAt: number;
   updatedAt: number;
 }
@@ -49,6 +61,7 @@ export interface SessionDetails {
   title?: string | null;
   goal?: string | null;
   context?: string | null;
+  contact?: SessionContact[] | null;
 }
 
 export interface StartedSession {
@@ -56,6 +69,8 @@ export interface StartedSession {
   repository: AccessibleRepository;
   git: GitToken & { remote: string };
   instructions: string;
+  // The key in the URLs the session's listener connects on.
+  listenKey: string;
 }
 
 type SessionRow = typeof agentSessions.$inferSelect & {
@@ -98,12 +113,14 @@ export async function startSession(
       title: details.title ?? null,
       goal: details.goal ?? null,
       context: details.context ?? null,
+      contact: details.contact ?? null,
       artifactsName: id,
       baseBranch: repository.defaultBranch,
       baseCommit: base?.commit ?? null,
       client:
         (details.client?.trim() || userAgent)?.slice(0, MAX_CLIENT_LENGTH) ??
         null,
+      lastSeenAt: new Date(),
     })
     .returning();
   log.info("session started", {
@@ -117,18 +134,21 @@ export async function startSession(
     agentName: agent.agentName,
     repositoryName: repository.name,
   });
+  const listenKey = await rekeyListener(id);
   return {
     session,
     repository,
-    git: { remote: fork.remote, ...fork.token },
+    listenKey,
+    git: { remote: linksFor(id).remote, ...fork.token },
     instructions: await sessionInstructions({
-      remote: fork.remote,
+      remote: linksFor(id).remote,
       tokenExpiresAt: fork.token.expiresAt,
       baseBranch: session.baseBranch,
       baseCommit: session.baseCommit,
       links: linksFor(id),
       client: session.client,
       groupedOnServer: await groupsOnServer(),
+      messaging: await sessionMessagingOn(),
     }),
   };
 }
@@ -157,6 +177,9 @@ export async function getSession(
   if (!allowed) {
     throw new ForgeError("NOT_FOUND", "Session not found");
   }
+  if (principal.kind === "agent") {
+    await markSeen(row);
+  }
   return toSession(row);
 }
 
@@ -174,20 +197,22 @@ export async function updateSession(
   return getSession(principal, id);
 }
 
+// A fresh git token for the session repository, with its remote.
 export async function sessionToken(
   principal: Principal,
   id: string,
+  linksFor: (sessionId: string) => Pick<SessionLinks, "remote">,
 ): Promise<GitToken & { remote: string }> {
   const session = await activeSession(principal, id);
   requireGit();
   await authorizeId(principal, session.repositoryId, "write");
-  const git = getGitHost();
-  const [remote, token] = await Promise.all([
-    git.remote(session.artifactsName),
-    git.token(session.artifactsName, "write", SESSION_TOKEN_TTL_SECONDS),
-  ]);
+  const token = await getGitHost().token(
+    session.artifactsName,
+    "write",
+    SESSION_TOKEN_TTL_SECONDS,
+  );
   log.info("session token issued", { sessionId: id });
-  return { remote, ...token };
+  return { remote: linksFor(id).remote, ...token };
 }
 
 export async function endSession(
@@ -197,9 +222,19 @@ export async function endSession(
   await getSession(principal, id);
   await getDb()
     .update(agentSessions)
-    .set({ status: "ended", endedAt: new Date(), updatedAt: new Date() })
+    .set({
+      status: "ended",
+      endedAt: new Date(),
+      updatedAt: new Date(),
+      listenKeyHash: null,
+    })
     .where(eq(agentSessions.id, id));
   log.info("session ended", { sessionId: id });
+  await releaseOnEnd(id);
+  await returnUndelivered(id);
+  await inbox.close(id, "The session ended").catch((err: unknown) => {
+    log.warn("session listener unreachable", { sessionId: id, err });
+  });
   return getSession(principal, id);
 }
 
@@ -234,6 +269,39 @@ async function createEmpty(name: string, defaultBranch: string) {
   return { remote, token };
 }
 
+// The session's agent is still there: it listened, or pushed. Written at
+// most once a minute.
+export async function touchSession(sessionId: string): Promise<void> {
+  await getDb()
+    .update(agentSessions)
+    .set({ lastSeenAt: new Date() })
+    .where(
+      and(
+        eq(agentSessions.id, sessionId),
+        or(
+          isNull(agentSessions.lastSeenAt),
+          lt(agentSessions.lastSeenAt, new Date(Date.now() - SEEN_WRITE_MS)),
+        ),
+      ),
+    );
+}
+
+// Every call the session's own agent makes for it keeps it live. Written at
+// most once a minute, since every session call passes here.
+async function markSeen(row: SessionRow): Promise<void> {
+  const now = new Date();
+  if (
+    row.lastSeenAt &&
+    now.getTime() - row.lastSeenAt.getTime() < SEEN_WRITE_MS
+  ) {
+    return;
+  }
+  await getDb()
+    .update(agentSessions)
+    .set({ lastSeenAt: now })
+    .where(eq(agentSessions.id, row.id));
+}
+
 async function ownsAgent(userId: string, agentId: string): Promise<boolean> {
   return (await getAgent(agentId))?.ownerUserId === userId;
 }
@@ -253,6 +321,7 @@ function toSession(row: SessionRow): Session {
     baseBranch: row.baseBranch,
     baseCommit: row.baseCommit,
     client: row.client,
+    contact: row.contact ?? [],
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),
   };

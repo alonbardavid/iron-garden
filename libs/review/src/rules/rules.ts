@@ -10,6 +10,7 @@ import {
   desc,
   eq,
   inArray,
+  ne,
   type RuleAction,
   type RuleMatch,
   type RuleWorkflow,
@@ -17,7 +18,8 @@ import {
 import { authorize, ForgeError, type AccessibleRepository } from "@lib/forge";
 import { getUserProfiles, type Principal } from "@lib/identity";
 import { moduleLogger } from "@lib/logging";
-import { patternProblem } from "./patterns";
+import { patternProblem } from "@lib/collab";
+import { EXCLUSIVE_NEEDS_FILES } from "@lib/contract";
 
 const log = moduleLogger("review/rules/rules");
 
@@ -211,8 +213,9 @@ export async function copyRules(
   };
 }
 
-// The repository's rules that are on, as statements that store them with a
-// pull request's new revision.
+// The repository's review rules that are on, as statements that store them
+// with a pull request's new revision. Mark-exclusive rules govern sessions as
+// they work, not a review, so they stay behind.
 export async function snapshotRules(
   repositoryId: string,
   pullRequestId: string,
@@ -225,6 +228,7 @@ export async function snapshotRules(
       and(
         eq(repositoryRules.repositoryId, repositoryId),
         eq(repositoryRules.enabled, true),
+        ne(repositoryRules.action, "mark-exclusive"),
       ),
     )
     .orderBy(asc(repositoryRules.createdAt));
@@ -279,6 +283,9 @@ async function checkRule(
   const problem = problems.find((p) => p !== null);
   if (problem) {
     throw new ForgeError("BAD_REQUEST", problem);
+  }
+  if (input.action === "mark-exclusive" && match.kind !== "files") {
+    throw new ForgeError("BAD_REQUEST", EXCLUSIVE_NEEDS_FILES);
   }
   if (input.action === "run-workflow" && !input.workflow) {
     throw new ForgeError("BAD_REQUEST", "Pick the workflow to run");

@@ -25,6 +25,8 @@ export interface AgentConfigInput {
   // The most words of the agent's transcripts a prompt carries, the latest
   // ones; 0 sends none.
   maxTranscriptWords: number;
+  // Whether sessions may message each other and see each other's contacts.
+  sessionMessaging: boolean;
 }
 
 export interface AgentConfig extends AgentConfigInput {
@@ -36,6 +38,7 @@ const DEFAULTS: AgentConfigInput = {
   model: DEFAULT_MODEL,
   gateway: null,
   maxTranscriptWords: DEFAULT_MAX_TRANSCRIPT_WORDS,
+  sessionMessaging: true,
 };
 
 export async function getAgentConfig(): Promise<AgentConfig> {
@@ -67,8 +70,17 @@ export async function setAgentConfig(
       target: instanceSettings.key,
       set: { value, updatedBy: userId, updatedAt: new Date() },
     });
-  log.info("agent config saved", { userId, processing: input.processing });
+  log.info("agent config saved", {
+    userId,
+    processing: input.processing,
+    sessionMessaging: input.sessionMessaging,
+  });
   return getAgentConfig();
+}
+
+// Whether sessions may talk to each other: an admin setting, on by default.
+export async function sessionMessagingOn(): Promise<boolean> {
+  return (await getAgentConfig()).sessionMessaging;
 }
 
 // Whether new pull requests are grouped on the server: the admin turned it on
@@ -95,6 +107,9 @@ function parse(value: string): Partial<AgentConfigInput> {
       ...(Number.isInteger(stored.maxTranscriptWords) &&
       stored.maxTranscriptWords! >= 0
         ? { maxTranscriptWords: stored.maxTranscriptWords }
+        : {}),
+      ...(typeof stored.sessionMessaging === "boolean"
+        ? { sessionMessaging: stored.sessionMessaging }
         : {}),
     };
   } catch (err) {

@@ -5,6 +5,8 @@ export const PROMPT_CONDITIONS = {
     "The agent is Claude: it named itself so when it started its session, or its requests say so",
   serverGroups:
     "This server groups pull requests (Admin > Agent config), so the agent gets no grouping prompt and cannot send groups",
+  messaging:
+    "Sessions may message each other and publish contacts (Admin > Agent config)",
 } as const;
 
 export type PromptFlags = Partial<

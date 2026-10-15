@@ -7,7 +7,7 @@ import { errorMessage } from "../../../logic/api/errors";
 
 type Values = Pick<
   AgentConfig,
-  "processing" | "model" | "maxTranscriptWords"
+  "processing" | "model" | "maxTranscriptWords" | "sessionMessaging"
 > & { gateway: string };
 
 /**
@@ -25,6 +25,7 @@ export function useAgentConfigForm(
     model: config.model,
     gateway: config.gateway ?? "",
     maxTranscriptWords: config.maxTranscriptWords,
+    sessionMessaging: config.sessionMessaging,
   };
   const form = useForm<Values>({
     initialValues: saved,

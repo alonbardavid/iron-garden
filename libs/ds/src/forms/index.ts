@@ -14,6 +14,7 @@ export {
   FormPasswordInput,
   FormRadioGroup,
   FormSelect,
+  FormSwitch,
   FormTextarea,
   type FormRadioOption,
 } from "./FormInputs";

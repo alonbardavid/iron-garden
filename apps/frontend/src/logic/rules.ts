@@ -42,6 +42,7 @@ export const ACTION_LABELS: Record<RuleAction, string> = {
   "high-impact": "High impact",
   "require-review": "Review",
   "run-workflow": "Workflow",
+  "mark-exclusive": "Exclusive",
 };
 
 // "Auto-accept", "High impact", "Review by Lena Fischer" or "Runs CI".

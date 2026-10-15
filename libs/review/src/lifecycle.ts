@@ -9,6 +9,7 @@ import {
   type GithubPullState,
   type MergeMethod,
 } from "@lib/db-models";
+import { releasePullRequestBranch } from "@lib/collab";
 import { authorize, ForgeError, requireGit, requireUser } from "@lib/forge";
 import {
   getGitHost,
@@ -147,6 +148,7 @@ export async function markMerged(
       updatedAt: new Date(),
     })
     .where(eq(pullRequests.id, pullRequestId));
+  await releasePullRequestBranch(pullRequestId);
   log.info("pull request merged", {
     pullRequestId,
     method: merge.method,
@@ -163,6 +165,7 @@ export async function markClosed(pullRequestId: string): Promise<void> {
         inArray(pullRequests.status, ["processing", "open"]),
       ),
     );
+  await releasePullRequestBranch(pullRequestId);
   log.info("pull request closed", { pullRequestId });
 }
 

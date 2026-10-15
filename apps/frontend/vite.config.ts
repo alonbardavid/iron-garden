@@ -22,6 +22,8 @@ export default defineConfig({
       // ws: agents may hold their chat socket open through this server too.
       "/api": { target: "http://localhost:8301", ws: true },
       "^/[a-z0-9-]+\\.git/": "http://localhost:8301",
+      // A session repository, /<session id>.git/.
+      "^/SES_[0-9a-f-]+\\.git/": "http://localhost:8301",
     },
   },
 });

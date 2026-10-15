@@ -328,6 +328,14 @@ const RuleForm = ({ rule }: { rule?: Rule }) => {
               title: "Run a workflow",
               text: "Starts a GitHub Actions workflow, such as a security audit, on the pull request's branch for every revision that matches. It needs a workflow_dispatch trigger and the pull request in GitHub.",
             },
+            {
+              value: "mark-exclusive",
+              title: "Mark exclusive",
+              text: matchesFileNames(draft)
+                ? "Only one agent session should change a matched file at a time: for files whose two versions can never be merged, such as images. A session that takes one another session holds is told. It does not change the review."
+                : "Only for file name patterns: which files a session is about to touch is known before any change or prompt.",
+              disabled: !matchesFileNames(draft),
+            },
           ]}
         />
         {draft.action === "require-review" && (
@@ -514,7 +522,7 @@ function Choice<T extends string>({
   label?: string;
   value: T;
   onChange: (value: T) => void;
-  options: { value: T; title: string; text: string }[];
+  options: { value: T; title: string; text: string; disabled?: boolean }[];
   columns?: number;
 }) {
   return (
@@ -524,6 +532,7 @@ function Choice<T extends string>({
           <Radio.Card
             key={option.value}
             value={option.value}
+            disabled={option.disabled}
             radius={8}
             p={14}
             style={
@@ -551,4 +560,9 @@ function Choice<T extends string>({
       </SimpleGrid>
     </Radio.Group>
   );
+}
+
+// Mark exclusive decides by path alone, so it takes file name patterns only.
+function matchesFileNames(draft: Draft): boolean {
+  return draft.kind === "pattern" && draft.pattern === "files";
 }

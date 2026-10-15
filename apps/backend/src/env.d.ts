@@ -13,6 +13,9 @@ declare namespace Cloudflare {
     CHAT_CHANNELS: DurableObjectNamespace<
       import("@lib/review").ChatChannelObject
     >;
+    SESSION_INBOXES: DurableObjectNamespace<
+      import("@lib/collab").SessionInboxObject
+    >;
   }
 }
 

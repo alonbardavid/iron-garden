@@ -7,6 +7,7 @@ export const RULE_ACTIONS = [
   "high-impact",
   "require-review",
   "run-workflow",
+  "mark-exclusive",
 ] as const;
 export type RuleAction = (typeof RULE_ACTIONS)[number];
 
@@ -44,16 +45,29 @@ export const ruleWorkflowSchema = z.object({
 });
 export type RuleWorkflow = z.infer<typeof ruleWorkflowSchema>;
 
-export const ruleInputSchema = z.object({
-  name: z.string().trim().min(1, "Name the rule").max(100),
-  match: ruleMatchSchema,
-  action: z.enum(RULE_ACTIONS),
-  // User ids, for require-review.
-  reviewers: z.array(z.string()).max(20).default([]),
-  // For run-workflow.
-  workflow: ruleWorkflowSchema.nullable().optional(),
-  enabled: z.boolean().default(true),
-});
+// A mark-exclusive rule decides by path alone, before any diff or agent
+// exists, so it takes only file globs or regexes.
+export const EXCLUSIVE_NEEDS_FILES =
+  "Mark exclusive works on file patterns only, not on prompts or code structure";
+
+export const ruleInputSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name the rule").max(100),
+    match: ruleMatchSchema,
+    action: z.enum(RULE_ACTIONS),
+    // User ids, for require-review.
+    reviewers: z.array(z.string()).max(20).default([]),
+    // For run-workflow.
+    workflow: ruleWorkflowSchema.nullable().optional(),
+    enabled: z.boolean().default(true),
+  })
+  .refine(
+    (rule) => rule.action !== "mark-exclusive" || rule.match.kind === "files",
+    {
+      message: EXCLUSIVE_NEEDS_FILES,
+      path: ["action"],
+    },
+  );
 export type RuleInput = z.input<typeof ruleInputSchema>;
 
 const personSchema = z.object({ id: z.string(), name: z.string() });

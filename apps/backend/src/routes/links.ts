@@ -1,5 +1,5 @@
 import type { ChatEndpointsFor, PullRequestLinks } from "@lib/review";
-import type { SessionLinks } from "@lib/collab";
+import type { ListenEndpointsFor, SessionLinks } from "@lib/collab";
 
 // Absolute URLs handed to agents, built from the origin the request came to so
 // they work on any instance and in any preview.
@@ -7,11 +7,17 @@ export function sessionLinks(origin: string) {
   return (id: string): SessionLinks => {
     const session = `${origin}/api/sessions/${id}`;
     return {
+      remote: `${origin}/${id}.git`,
       session,
       token: `${session}/token`,
       pullRequests: `${session}/pull-requests`,
       transcripts: `${session}/transcripts`,
       end: `${session}/end`,
+      activity: `${session}/activity`,
+      notifications: `${session}/notifications`,
+      messages: `${session}/messages`,
+      listen: `${session}/listen`,
+      chat: `${session}/chat`,
     };
   };
 }
@@ -37,6 +43,17 @@ export function chatEndpoints(origin: string): ChatEndpointsFor {
     return {
       url,
       messagesUrl: `${url}/messages`,
+      socketUrl: `${url.replace(/^http/, "ws")}/socket`,
+    };
+  };
+}
+
+// Where a session's listener connects; the key in the path is its credential.
+export function listenEndpoints(origin: string): ListenEndpointsFor {
+  return (key) => {
+    const url = `${origin}/api/session-inbox/${key}`;
+    return {
+      pollUrl: `${url}/notifications`,
       socketUrl: `${url.replace(/^http/, "ws")}/socket`,
     };
   };

@@ -6,11 +6,19 @@ import { promptSetting } from "./prompt-setting";
 import { isClaude, renderTemplate } from "./template";
 
 export interface SessionLinks {
+  // The session repository's remote, through this server so its pushes are
+  // seen.
+  remote: string;
   session: string;
   token: string;
   pullRequests: string;
   transcripts: string;
   end: string;
+  activity: string;
+  notifications: string;
+  messages: string;
+  listen: string;
+  chat: string;
 }
 
 export interface InstructionInput {
@@ -23,6 +31,8 @@ export interface InstructionInput {
   client: string | null;
   // Whether the server, not the agent, groups the session's pull requests.
   groupedOnServer: boolean;
+  // Whether sessions may message each other.
+  messaging: boolean;
 }
 
 const sessionPrompt = promptSetting(
@@ -53,9 +63,14 @@ export async function sessionInstructions(
     pullRequestsUrl: input.links.pullRequests,
     transcriptsUrl: input.links.transcripts,
     endUrl: input.links.end,
+    activityUrl: input.links.activity,
+    listenUrl: input.links.listen,
+    messagesUrl: input.links.messages,
+    chatUrl: input.links.chat,
   };
   return renderTemplate(prompt, values, {
     claude: isClaude(input.client),
     serverGroups: input.groupedOnServer,
+    messaging: input.messaging,
   });
 }

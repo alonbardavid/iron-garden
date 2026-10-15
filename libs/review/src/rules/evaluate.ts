@@ -1,6 +1,6 @@
 import type { DiffLine } from "@lib/diff";
 import type { GroupRangeRow, RuleAction, RuleMatch } from "@lib/db-models";
-import { pathMatcher } from "./patterns";
+import { pathMatcher } from "@lib/collab/patterns";
 import { isScript, structureMatches } from "./structure";
 
 export interface RunRule {

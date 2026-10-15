@@ -261,7 +261,7 @@ const Empty = ({ agent }: { agent: ChatAgent }) => (
 );
 
 // Keeps the newest message in view as messages arrive.
-function useScrolledToEnd(count: number | undefined) {
+export function useScrolledToEnd(count: number | undefined) {
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });

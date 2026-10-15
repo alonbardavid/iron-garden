@@ -1,14 +1,14 @@
-// A chat key is the only credential of the URL an agent listens on, so it
-// carries as much entropy as an API key and only its hash is stored.
-const PREFIX = "cgit_chat_";
+// A key that is the only credential of a URL an agent listens on (chat, or a
+// session's listener) carries as much entropy as an API key, and only its
+// hash is stored.
 const KEY_BYTES = 32;
 
-export function newChatKey(): string {
+export function newUrlKey(prefix: string): string {
   const bytes = crypto.getRandomValues(new Uint8Array(KEY_BYTES));
-  return PREFIX + base64Url(bytes);
+  return prefix + base64Url(bytes);
 }
 
-export async function hashChatKey(key: string): Promise<string> {
+export async function hashUrlKey(key: string): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(key),

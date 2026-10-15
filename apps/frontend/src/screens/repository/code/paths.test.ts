@@ -11,11 +11,11 @@ import {
 
 describe("code paths", () => {
   it("links a path and ref with slashes readable, and the root bare", () => {
-    expect(codePath("app", "src/main.ts")).toBe("/r/app?path=src/main.ts");
+    expect(codePath("app", "src/main.ts")).toBe("/r/app/code?path=src/main.ts");
     expect(codePath("app", "src", "feature/x")).toBe(
-      "/r/app?ref=feature/x&path=src",
+      "/r/app/code?ref=feature/x&path=src",
     );
-    expect(codePath("app", "")).toBe("/r/app");
+    expect(codePath("app", "")).toBe("/r/app/code");
   });
 
   it("links history pages counting from one", () => {

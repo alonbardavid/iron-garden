@@ -23,6 +23,8 @@ import {
 } from "./screens/pull-requests/PullRequestScreen";
 import { PullRequestsScreen } from "./screens/pull-requests/PullRequestsScreen";
 import { RepositoriesScreen } from "./screens/repositories/RepositoriesScreen";
+import { RepositoryHome } from "./screens/repository/RepositoryHome";
+import { SessionScreen } from "./screens/sessions/SessionScreen";
 import { CodeScreen } from "./screens/repository/CodeScreen";
 import { CommitsScreen } from "./screens/repository/CommitsScreen";
 import { CommitScreen } from "./screens/repository/CommitScreen";
@@ -86,7 +88,9 @@ export const App = () => {
     <Routes>
       <Route path="/" element={<RepositoriesScreen />} />
       <Route path="/r/:name" element={<RepositoryLayout />}>
-        <Route index element={<CodeScreen />} />
+        <Route index element={<RepositoryHome />} />
+        <Route path="sessions/:id/:tab?" element={<SessionScreen />} />
+        <Route path="code" element={<CodeScreen />} />
         <Route path="commits" element={<CommitsScreen />} />
         <Route path="commits/:hash" element={<CommitScreen />} />
         <Route path="pulls" element={<PullRequestsScreen />} />

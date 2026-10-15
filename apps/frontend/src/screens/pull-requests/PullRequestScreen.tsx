@@ -29,6 +29,7 @@ import { ProcessingErrorNotice } from "./ProcessingErrorNotice";
 import { pullRequestPath, type PullRequestTab } from "./paths";
 import { ReviewProvider } from "./review";
 import { ReviewButton } from "./ReviewButton";
+import { StatusPill } from "./StatusPill";
 import { Loading, SkeletonCard } from "../../components/skeletons";
 
 // A processing pull request changes as soon as it is bracketed.
@@ -256,52 +257,3 @@ const Dot = () => (
     ·
   </Text>
 );
-
-const PILLS = {
-  open: {
-    label: "Open",
-    bg: palette.successSoft,
-    color: palette.successInk,
-    dot: palette.added,
-  },
-  merged: {
-    label: "Merged",
-    bg: palette.accentSoft,
-    color: palette.accentInk,
-    dot: palette.accent,
-  },
-  closed: {
-    label: "Closed",
-    bg: palette.hover,
-    color: palette.secondary,
-    dot: palette.faint,
-  },
-} as const;
-
-// A processing pull request is open while its agent brackets it.
-const StatusPill = ({ status }: { status: PullRequestDetail["status"] }) => {
-  const pill = PILLS[status === "processing" ? "open" : status];
-  return (
-    <Group
-      gap={6}
-      h={24}
-      px={10}
-      fz={12}
-      fw={600}
-      bg={pill.bg}
-      c={pill.color}
-      style={{ borderRadius: 12 }}
-    >
-      <span
-        aria-hidden
-        style={{
-          width: 7,
-          height: 7,
-          borderRadius: "50%",
-          background: pill.dot,
-        }}
-      />
-      {pill.label}
-    </Group>
-  );
-};

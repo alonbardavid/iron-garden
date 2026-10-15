@@ -1,5 +1,6 @@
-// Path patterns for rules. Globs are relative to the repository root: `*`
-// and `?` stay inside a folder, `**` crosses folders, `{a,b}` is either.
+// Path patterns for rules, review and mark-exclusive alike. Globs are
+// relative to the repository root: `*` and `?` stay inside a folder, `**`
+// crosses folders, `{a,b}` is either.
 export function globToRegExp(glob: string): RegExp {
   let source = "";
   for (let i = 0; i < glob.length; i++) {

@@ -16,8 +16,22 @@ export {
 } from "./schemas/forge";
 export {
   agentSessions,
+  sessionFiles,
+  sessionBranches,
+  sessionCollisions,
+  sessionNotifications,
+  sessionChatMessages,
   SESSION_STATUSES,
+  SESSION_FILE_SOURCES,
+  NOTIFICATION_KINDS,
+  SESSION_CHAT_SENDERS,
+  CONTACT_KINDS,
   type SessionStatus,
+  type SessionFileSource,
+  type NotificationKind,
+  type SessionChatSender,
+  type ContactKind,
+  type SessionContact,
 } from "./schemas/collab";
 export {
   pullRequests,
@@ -102,8 +116,14 @@ export {
   sql,
   inArray,
   isNull,
+  isNotNull,
+  notInArray,
+  gt,
+  lt,
+  ne,
   desc,
   asc,
   count,
+  max,
   type SQL,
 } from "drizzle-orm";

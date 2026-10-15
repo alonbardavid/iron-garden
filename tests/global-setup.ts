@@ -7,6 +7,8 @@ import { buildImagesFixtureSql } from "./e2e/review/images-fixture";
 import { buildReferencesFixtureSql } from "./e2e/review/references-fixture";
 import { buildRulesFixtureSql } from "./e2e/review/rules-fixture";
 import { buildGithubFixtureSql } from "./e2e/github/fixture";
+import { buildSessionsFixtureSql } from "./e2e/sessions/fixture";
+import { buildCollideFixtureSql } from "./e2e/sessions/collide-fixture";
 import { buildActivityFixtureSql } from "./e2e/review/activity-fixture";
 import { RESET_USER, TEST_ADMIN, TEST_USER } from "./e2e/users";
 
@@ -30,6 +32,11 @@ const TABLES = [
   "pull_request_rules",
   "pull_request_groups",
   "pull_request_files",
+  "session_chat_messages",
+  "session_notifications",
+  "session_collisions",
+  "session_files",
+  "session_branches",
   "pull_requests",
   "agent_sessions",
   "agent_repository_access",
@@ -92,6 +99,10 @@ export default async function globalSetup() {
   ]);
   runWrangler(["d1", "execute", "DB", "--command", buildActivityFixtureSql()]);
   runWrangler(["d1", "execute", "DB", "--command", buildImagesFixtureSql()]);
+
+  console.log("[global-setup] seeding agent sessions");
+  runWrangler(["d1", "execute", "DB", "--command", buildSessionsFixtureSql()]);
+  runWrangler(["d1", "execute", "DB", "--command", buildCollideFixtureSql()]);
 
   console.log("[global-setup] seeding a repository mirrored from GitHub");
   runWrangler([

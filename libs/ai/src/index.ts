@@ -2,6 +2,7 @@ export {
   getAgentConfig,
   setAgentConfig,
   groupsOnServer,
+  sessionMessagingOn,
   DEFAULT_MODEL,
   DEFAULT_GATEWAY,
   DEFAULT_MAX_TRANSCRIPT_WORDS,

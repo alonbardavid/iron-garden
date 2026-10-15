@@ -17,6 +17,14 @@ import {
 } from "@lib/forge";
 import type { UserProfile } from "@lib/identity";
 import {
+  chatWithSession,
+  dismissUnmergedWork,
+  getRepositorySession,
+  getSessionTranscript,
+  listRepositorySessions,
+  sessionChat,
+} from "@lib/collab";
+import {
   createRule,
   deleteRule,
   getRule,
@@ -144,6 +152,36 @@ export const repositories = api.repositories.router({
     ),
   },
   github: repositoryGithub,
+  sessions: {
+    list: api.repositories.sessions.list.handler(
+      ({ context: { principal }, input }) =>
+        listRepositorySessions(principal, input.name),
+    ),
+    get: api.repositories.sessions.get.handler(
+      ({ context: { principal }, input }) =>
+        getRepositorySession(principal, input.name, input.id),
+    ),
+    transcript: api.repositories.sessions.transcript.handler(
+      ({ context: { principal }, input }) =>
+        getSessionTranscript(principal, input.name, input.id, input.transcript),
+    ),
+    chat: {
+      messages: api.repositories.sessions.chat.messages.handler(
+        ({ context: { principal }, input }) =>
+          sessionChat(principal, input.name, input.id),
+      ),
+      send: api.repositories.sessions.chat.send.handler(
+        ({ context: { principal }, input }) =>
+          chatWithSession(principal, input.name, input.id, input.body),
+      ),
+    },
+    dismiss: api.repositories.sessions.dismiss.handler(
+      async ({ context: { principal }, input }) => {
+        await dismissUnmergedWork(principal, input.name, input.id);
+        return { ok: true as const };
+      },
+    ),
+  },
   rules: {
     list: api.repositories.rules.list.handler(
       ({ context: { principal }, input }) => listRules(principal, input.name),

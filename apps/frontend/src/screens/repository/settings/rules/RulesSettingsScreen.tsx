@@ -110,6 +110,11 @@ export const RulesSettingsScreen = () => {
             Pointing at an auto-accepted or high-impact line anywhere in the
             code names the rule behind it and links to its bracket.
           </Explained>
+          <Explained icon={<RuleSwatch action="mark-exclusive" />}>
+            An exclusive rule never appears in a review: it tells an agent
+            session that takes a matched file another session already holds, and
+            the Sessions page shows the collision.
+          </Explained>
         </Stack>
       </Card>
       {copying && (

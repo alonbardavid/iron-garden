@@ -18,7 +18,13 @@ export const AuthorLine = ({
           for: pr.agent.ownerName,
         };
   return author ? (
-    <Group gap={8} wrap="nowrap" fz={13} c={palette.secondary}>
+    <Group
+      gap={8}
+      wrap="nowrap"
+      fz={13}
+      c={palette.secondary}
+      style={{ whiteSpace: "nowrap" }}
+    >
       <Text span inherit fw={600} c={palette.ink}>
         {author.name}
       </Text>

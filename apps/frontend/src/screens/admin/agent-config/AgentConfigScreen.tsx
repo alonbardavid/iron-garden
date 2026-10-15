@@ -6,6 +6,7 @@ import { orpc } from "../../../logic/api/orpc";
 import { ModelCard } from "./ModelCard";
 import { ProcessingCard } from "./ProcessingCard";
 import { PromptSection } from "./PromptSection";
+import { SessionsCard } from "./SessionsCard";
 
 // Everything about how agents work here, one section each: who groups their
 // pull requests and with which model, what an agent reads when it starts,
@@ -24,6 +25,7 @@ const AgentConfigSections = ({ config }: { config: AgentConfig }) => {
     <Stack gap={16}>
       <ProcessingCard config={config} onModeChange={mode.set} />
       <ModelCard config={config} />
+      <SessionsCard config={config} />
       <PromptSection which="sessionPrompt" />
       <PromptSection which="processingPrompt" mode={mode.chosen} />
     </Stack>

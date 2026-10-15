@@ -22,7 +22,7 @@ import { AuthorLine } from "./AuthorLine";
 import { Markdown } from "../../components/markdown/Markdown";
 import { pullRequestPath } from "./paths";
 import { Bar } from "./ProgressBar";
-import { OpenFromGithubButton } from "./OpenFromGithub";
+import { ImportPullRequestButton } from "./ImportPullRequest";
 
 const FILTERS = [
   {
@@ -60,7 +60,10 @@ export const PullRequestsScreen = () => {
     FILTERS.find((f) => f.key === search.get("status")) ?? FILTERS[0];
   const shown = all.filter(current.match);
   return (
-    <Page title="Pull requests" action={<OpenFromGithubButton name={name} />}>
+    <Page
+      title="Pull requests"
+      action={<ImportPullRequestButton name={name} />}
+    >
       <Group align="start" gap={20} wrap="nowrap">
         <Paper withBorder radius="md" p={6} w={240} style={{ flexShrink: 0 }}>
           <Text size="xs" fw={600} c="dimmed" px={8} pt={10} pb={4}>
