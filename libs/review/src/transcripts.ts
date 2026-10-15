@@ -1,5 +1,6 @@
-import { TRANSCRIPT_TRAILER } from "@lib/contract";
+import { MAX_TRANSCRIPT_ENTRIES, TRANSCRIPT_TRAILER } from "@lib/contract";
 import {
+  and,
   eq,
   getDb,
   inArray,
@@ -30,6 +31,7 @@ export interface TranscriptSummary {
   source: TranscriptSource;
   entries: number;
   createdAt: number;
+  updatedAt: number | null;
 }
 
 export interface Transcript extends Omit<TranscriptSummary, "entries"> {
@@ -40,32 +42,83 @@ type TranscriptRow = typeof transcripts.$inferSelect;
 
 // An agent's transcript of its session. Naming the commit it led to attaches
 // it now; without one, a commit attaches it by naming the transcript's id in
-// its Agent-Transcript trailer.
+// its Agent-Transcript trailer. With `appendTo`, the entries go on the end of
+// a transcript no commit names yet.
 export async function uploadTranscript(
   principal: Principal,
   sessionId: string,
-  input: { commit?: string; entries: TranscriptEntryRow[] },
+  input: { appendTo?: string; commit?: string; entries: TranscriptEntryRow[] },
 ): Promise<TranscriptSummary> {
   const agent = requireAgent(principal);
   const session = await activeSession(agent, sessionId);
+  const row = input.appendTo
+    ? await appendToTranscript(session.id, input.appendTo, input)
+    : await insertTranscript(session.id, input);
+  log.info("transcript uploaded", {
+    transcriptId: row.id,
+    sessionId: session.id,
+    appended: Boolean(input.appendTo),
+    commit: input.commit ?? null,
+    entries: input.entries.length,
+  });
+  return summarizeTranscript(row);
+}
+
+async function insertTranscript(
+  sessionId: string,
+  input: { commit?: string; entries: TranscriptEntryRow[] },
+): Promise<TranscriptRow> {
   assertFits(input.entries);
   const [row] = await getDb()
     .insert(transcripts)
     .values({
       id: newEntityId("TRANSCRIPT"),
-      sessionId: session.id,
+      sessionId,
       commitSha: input.commit ?? null,
       source: input.commit ? "api" : "trailer",
       entries: input.entries,
     })
     .returning();
-  log.info("transcript uploaded", {
-    transcriptId: row!.id,
-    sessionId: session.id,
-    commit: input.commit ?? null,
-    entries: input.entries.length,
-  });
-  return summarizeTranscript(row!);
+  return row!;
+}
+
+async function appendToTranscript(
+  sessionId: string,
+  id: string,
+  input: { commit?: string; entries: TranscriptEntryRow[] },
+): Promise<TranscriptRow> {
+  const db = getDb();
+  const [existing] = await db
+    .select()
+    .from(transcripts)
+    .where(and(eq(transcripts.id, id), eq(transcripts.sessionId, sessionId)));
+  if (!existing) {
+    throw new ForgeError("NOT_FOUND", "No such transcript in this session");
+  }
+  if (existing.commitSha) {
+    throw new ForgeError(
+      "CONFLICT",
+      `That transcript ended in commit ${existing.commitSha}; upload the next one without appendTo.`,
+    );
+  }
+  const entries = [...existing.entries, ...input.entries];
+  if (entries.length > MAX_TRANSCRIPT_ENTRIES) {
+    throw new ForgeError(
+      "BAD_REQUEST",
+      `A transcript holds at most ${MAX_TRANSCRIPT_ENTRIES} entries; upload the rest without appendTo.`,
+    );
+  }
+  assertFits(entries);
+  const [row] = await db
+    .update(transcripts)
+    .set({
+      entries,
+      updatedAt: new Date(),
+      ...(input.commit && { commitSha: input.commit, source: "api" as const }),
+    })
+    .where(eq(transcripts.id, id))
+    .returning();
+  return row!;
 }
 
 // Attaches the transcripts the commits' trailers name: an id of one this
@@ -220,7 +273,7 @@ function assertFits(entries: TranscriptEntryRow[]) {
   if (bytes > MAX_TRANSCRIPT_BYTES) {
     throw new ForgeError(
       "BAD_REQUEST",
-      `The transcript is ${bytes} bytes; at most ${MAX_TRANSCRIPT_BYTES} fit. Upload one per commit.`,
+      `The transcript would be ${bytes} bytes; at most ${MAX_TRANSCRIPT_BYTES} fit. Upload one per commit, and the rest without appendTo.`,
     );
   }
 }
@@ -232,5 +285,6 @@ export function summarizeTranscript(row: TranscriptRow): TranscriptSummary {
     source: row.source,
     entries: row.entries.length,
     createdAt: row.createdAt.getTime(),
+    updatedAt: row.updatedAt?.getTime() ?? null,
   };
 }

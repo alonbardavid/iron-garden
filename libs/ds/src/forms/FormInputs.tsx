@@ -11,6 +11,8 @@ import {
   Stack,
   Select,
   type SelectProps,
+  Switch,
+  type SwitchProps,
   Textarea,
   type TextareaProps,
   TextInput,
@@ -103,4 +105,15 @@ export function FormTextarea({
 }: FormFieldProps & Omit<TextareaProps, "error">) {
   const form = useFormContext();
   return <Textarea {...props} {...form.getInputProps(name)} />;
+}
+
+// An on/off setting; the form holds it as a boolean.
+export function FormSwitch({
+  name,
+  ...props
+}: FormFieldProps & Omit<SwitchProps, "error">) {
+  const form = useFormContext();
+  return (
+    <Switch {...props} {...form.getInputProps(name, { type: "checkbox" })} />
+  );
 }

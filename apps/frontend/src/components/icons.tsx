@@ -45,6 +45,13 @@ export const PullRequestsIcon = ({ size }: IconProps) => (
   </Icon>
 );
 
+export const SessionsIcon = ({ size }: IconProps) => (
+  <Icon size={size}>
+    <rect x="2.5" y="5" width="11" height="8" rx="2" />
+    <path d="M8 2.5V5M6 9h.01M10 9h.01" />
+  </Icon>
+);
+
 export const SettingsIcon = ({ size }: IconProps) => (
   <Icon size={size}>
     <circle cx="8" cy="8" r="2.25" />

@@ -25,6 +25,11 @@ export const ENTITY_PREFIXES = {
   PULL_REQUEST_REVIEW: "REV",
   CHAT_CHANNEL: "CHC",
   CHAT_MESSAGE: "CHM",
+  SESSION_FILE: "SESF",
+  SESSION_BRANCH: "SESB",
+  SESSION_COLLISION: "COL",
+  SESSION_NOTIFICATION: "NTF",
+  SESSION_CHAT_MESSAGE: "SCM",
 } as const satisfies Record<string, Uppercase<string>>;
 
 export type Entity = keyof typeof ENTITY_PREFIXES;

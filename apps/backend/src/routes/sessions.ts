@@ -1,6 +1,11 @@
 import {
   endSession,
+  fetchNotifications,
   getSession,
+  listenAgain,
+  replyInSessionChat,
+  reportActivity,
+  sendMessage,
   sessionToken,
   startSession,
   updateSession,
@@ -28,7 +33,12 @@ import { pullRequestsFromGithub } from "./github";
 import { activity, comments } from "./activity";
 import { chat } from "./chat";
 import { api } from "./api";
-import { chatEndpoints, pullRequestLinks, sessionLinks } from "./links";
+import {
+  chatEndpoints,
+  listenEndpoints,
+  pullRequestLinks,
+  sessionLinks,
+} from "./links";
 
 const toSession = (session: Session) => ({
   id: session.id,
@@ -40,6 +50,7 @@ const toSession = (session: Session) => ({
   status: session.status,
   baseBranch: session.baseBranch,
   baseCommit: session.baseCommit,
+  contact: session.contact,
   createdAt: session.createdAt,
   updatedAt: session.updatedAt,
 });
@@ -67,6 +78,7 @@ export const sessions = api.sessions.router({
         },
         instructions: started.instructions,
         links: links(started.session.id),
+        listen: listenEndpoints(origin)(started.listenKey),
       };
     },
   ),
@@ -80,12 +92,35 @@ export const sessions = api.sessions.router({
     async ({ context: { principal }, input: { id, ...details } }) =>
       toSession(await updateSession(principal, id, details)),
   ),
-  token: api.sessions.token.handler(({ context: { principal }, input }) =>
-    sessionToken(principal, input.id),
+  token: api.sessions.token.handler(
+    ({ context: { principal, origin }, input }) =>
+      sessionToken(principal, input.id, sessionLinks(origin)),
   ),
   end: api.sessions.end.handler(async ({ context: { principal }, input }) =>
     toSession(await endSession(principal, input.id)),
   ),
+  activity: api.sessions.activity.handler(
+    ({ context: { principal }, input: { id, ...report } }) =>
+      reportActivity(principal, id, report),
+  ),
+  notifications: api.sessions.notifications.handler(
+    ({ context: { principal }, input }) =>
+      fetchNotifications(principal, input.id),
+  ),
+  listen: api.sessions.listen.handler(
+    ({ context: { principal, origin }, input }) =>
+      listenAgain(principal, input.id, listenEndpoints(origin)),
+  ),
+  sendMessage: api.sessions.sendMessage.handler(
+    ({ context: { principal }, input: { id, ...message } }) =>
+      sendMessage(principal, id, message),
+  ),
+  chat: {
+    reply: api.sessions.chat.reply.handler(
+      ({ context: { principal }, input }) =>
+        replyInSessionChat(principal, input.id, input.body),
+    ),
+  },
   createPullRequest: api.sessions.createPullRequest.handler(
     ({ context: { principal, origin }, input: { id, ...pr } }) =>
       createPullRequest(

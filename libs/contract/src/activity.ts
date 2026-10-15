@@ -45,6 +45,8 @@ export const transcriptSummarySchema = z.object({
   source: z.enum(TRANSCRIPT_SOURCES),
   entries: z.number(),
   createdAt: z.number(),
+  // When the agent last appended to it; null if it never did.
+  updatedAt: z.number().nullable(),
 });
 export type TranscriptSummary = z.infer<typeof transcriptSummarySchema>;
 
@@ -184,13 +186,16 @@ export const commentsContract = {
 };
 
 // What an agent sends: a transcript for its session, naming the commit it
-// led to or left for a commit's trailer to name.
+// led to or left for a commit's trailer to name. With `appendTo`, the entries
+// go on the end of a transcript it uploaded before, so it can upload as it
+// goes; a transcript stops taking entries once a commit names it.
 export const transcriptsContract = {
   upload: oc
     .route({ method: "POST", path: "/api/sessions/{id}/transcripts" })
     .input(
       z.object({
         id: z.string(),
+        appendTo: z.string().optional(),
         commit: sha.optional(),
         entries: z
           .array(transcriptEntrySchema)

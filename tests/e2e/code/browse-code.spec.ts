@@ -4,7 +4,8 @@ import { REVIEW_FIXTURE } from "../review/fixture";
 import { TEST_ADMIN } from "../users";
 
 const repository = REVIEW_FIXTURE.repository;
-const overview = `/r/${repository}`;
+const base = `/r/${repository}`;
+const overview = `${base}/code`;
 
 // A 96×48 PNG: a blue ellipse.
 const LOGO =
@@ -288,6 +289,16 @@ test("browses from the root through a folder to a highlighted file", async ({
   await expect(files.getByRole("listitem")).toHaveCount(6);
 });
 
+test("a code link from before code moved to /code still opens the file", async ({
+  page,
+}) => {
+  await page.goto(`${base}?path=src/greeting.ts`);
+  await expect(page).toHaveURL(`${overview}?path=src/greeting.ts`);
+  await expect(
+    page.getByRole("table", { name: "Contents of src/greeting.ts" }),
+  ).toBeVisible();
+});
+
 test("markdown renders, with its links and images in the repository", async ({
   page,
 }) => {
@@ -349,7 +360,7 @@ test("history lists a branch's commits, and each opens the code as it was", asyn
 }) => {
   await page.goto(overview);
   await page.getByRole("link", { name: "History" }).click();
-  await expect(page).toHaveURL(`${overview}/commits`);
+  await expect(page).toHaveURL(`${base}/commits`);
   const commits = page.getByRole("list", { name: "Commits" });
   await expect(commits.getByRole("listitem")).toHaveCount(2);
   await expect(commits.getByRole("listitem").first()).toContainText(
@@ -371,12 +382,12 @@ test("history lists a branch's commits, and each opens the code as it was", asyn
 test("a commit shows what it changed, and the code as it left it", async ({
   page,
 }) => {
-  await page.goto(`${overview}/commits`);
+  await page.goto(`${base}/commits`);
   await page
     .getByRole("list", { name: "Commits" })
     .getByRole("link", { name: "Add the greeting" })
     .click();
-  await expect(page).toHaveURL(`${overview}/commits/${MAIN}`);
+  await expect(page).toHaveURL(`${base}/commits/${MAIN}`);
   await expect(
     page.getByRole("heading", { name: "Add the greeting" }),
   ).toBeVisible();
@@ -393,7 +404,7 @@ test("a commit shows what it changed, and the code as it left it", async ({
   const tree = page.getByRole("navigation", { name: "File tree" });
   await expect(tree.getByRole("link")).toHaveCount(7);
   await tree.getByRole("link", { name: "README.md" }).click();
-  await expect(page).toHaveURL(`${overview}/commits/${MAIN}?file=README.md`);
+  await expect(page).toHaveURL(`${base}/commits/${MAIN}?file=README.md`);
   await expect(
     tree.getByRole("link", { name: "README.md" }).getByLabel("Modified"),
   ).toBeVisible();
@@ -411,7 +422,7 @@ test("a commit shows what it changed, and the code as it left it", async ({
 
   await page.goBack();
   await card.getByRole("link", { name: OLDER.slice(0, 7) }).click();
-  await expect(page).toHaveURL(`${overview}/commits/${OLDER}`);
+  await expect(page).toHaveURL(`${base}/commits/${OLDER}`);
   await expect(card).toContainText("1 file changed");
   await expect(
     tree.getByRole("link", { name: "README.md" }).getByLabel("Added"),

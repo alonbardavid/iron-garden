@@ -14,7 +14,6 @@ import { Page } from "../../components/Page";
 import { useSignedInMe } from "../../logic/authentication/useMe";
 import { useRepository } from "./RepositoryLayout";
 import { CodeBrowser } from "./code/CodeBrowser";
-import { StartSession } from "./StartSession";
 
 // The repository's code once it has some; until then, how to push it.
 export const CodeScreen = () => {
@@ -22,12 +21,7 @@ export const CodeScreen = () => {
   return (
     <Page
       maw={repository.head ? undefined : 820}
-      action={
-        <Group gap={8}>
-          {repository.head && <ClonePopover />}
-          <StartSession repository={repository.name} />
-        </Group>
-      }
+      action={repository.head && <ClonePopover />}
       title={
         <Group gap={10} align="baseline">
           <Title order={2} fw={400} fz={24}>

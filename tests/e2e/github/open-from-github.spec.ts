@@ -6,8 +6,9 @@ import { GITHUB_FIXTURE } from "./fixture";
 const f = GITHUB_FIXTURE;
 const fromGithub = `/api/repositories/${f.repository}/pull-requests/from-github`;
 
-// Local dev has no Workers AI, so the server never groups here: the button
-// stays hidden, and opening one is refused before GitHub is asked.
+// Local dev has no Workers AI, so the server never groups here: Import
+// offers only the agent prompt, and opening one is refused before GitHub is
+// asked.
 test("without server processing, a connected repository offers no pull request from GitHub", async ({
   page,
   request,
@@ -37,9 +38,12 @@ test("without server processing, a connected repository offers no pull request f
   await expect(
     page.getByRole("heading", { name: "Pull requests" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Open from GitHub" }),
-  ).toHaveCount(0);
+  // Import is always there; without server grouping it offers only the
+  // agent's prompt.
+  await page.getByRole("button", { name: "Import" }).click();
+  const dialog = page.getByRole("dialog", { name: "Import a pull request" });
+  await expect(dialog.getByText(/^Import a pull request into/)).toBeVisible();
+  await expect(dialog.getByRole("tab", { name: "From GitHub" })).toHaveCount(0);
 });
 
 test("only someone with Write may open a pull request from GitHub", async ({
@@ -62,10 +66,11 @@ test("an open GitHub pull request or a branch is picked to open one from", async
   await serverGroups(page);
   await signInPage(page, TEST_ADMIN.username, TEST_ADMIN.password);
   await page.goto(`/r/${f.repository}/pulls`);
-  await page.getByRole("button", { name: "Open from GitHub" }).click();
-  const dialog = page.getByRole("dialog", {
-    name: "Open a pull request from GitHub",
-  });
+  await page.getByRole("button", { name: "Import" }).click();
+  const dialog = page.getByRole("dialog", { name: "Import a pull request" });
+  await dialog.getByRole("tab", { name: "By agent" }).click();
+  await expect(dialog.getByText(/^Import a pull request into/)).toBeVisible();
+  await dialog.getByRole("tab", { name: "From GitHub" }).click();
 
   await dialog.getByRole("textbox", { name: "GitHub pull request" }).click();
   await expect(

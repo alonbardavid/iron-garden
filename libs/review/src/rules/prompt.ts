@@ -15,6 +15,9 @@ const ACTIONS: Record<RuleAction, string> = {
   "require-review": "needs a named reviewer to accept these lines",
   "run-workflow":
     "runs a CI workflow on GitHub when these lines change; reviewers still read them",
+  // Never on a pull request: snapshotRules leaves it behind.
+  "mark-exclusive":
+    "only one session may change these files at a time; it does not change the review",
 };
 
 const CONSTRUCTS = { imports: "import statements", comments: "comments" };

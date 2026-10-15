@@ -9,25 +9,30 @@ import type {
 import { palette } from "@lib/ds";
 import { CommitIcon } from "../../../components/icons";
 import { orpc } from "../../../logic/api/orpc";
-import { FileLink, fileLinksOf, LinkedText, NoteMarkdown } from "./FileLinks";
+import {
+  FileLink,
+  LinkedMarkdown,
+  LinkedText,
+  type FileLinks,
+} from "./FileLinks";
 import { shortSha } from "./parts";
 import { SkeletonChat } from "../../../components/skeletons";
 
 // A transcript as a conversation: prompts on the right, what the agent said
 // and did on the left, and the commit it ended in. The files it names link
-// to the pull request's.
+// where `links` says.
 export const TranscriptChat = ({
-  pr,
+  links,
   transcript,
   ending,
 }: {
-  pr: PullRequestDetail;
-  transcript: Transcript;
+  links: FileLinks;
+  transcript: Pick<Transcript, "entries">;
   ending?: ReactNode;
 }) => (
   <Stack gap={14}>
     {transcript.entries.map((entry, i) => (
-      <ChatEntry key={i} pr={pr} entry={entry} />
+      <ChatEntry key={i} links={links} entry={entry} />
     ))}
     {ending}
   </Stack>
@@ -70,10 +75,10 @@ export const TranscriptLoading = ({ error }: { error: Error | null }) =>
   );
 
 const ChatEntry = ({
-  pr,
+  links,
   entry,
 }: {
-  pr: PullRequestDetail;
+  links: FileLinks;
   entry: TranscriptEntry;
 }) =>
   entry.role === "user" ? (
@@ -91,25 +96,25 @@ const ChatEntry = ({
         maw="80%"
         style={{ borderRadius: 10, whiteSpace: "pre-wrap" }}
       >
-        <LinkedText pr={pr}>{entry.text}</LinkedText>
+        <LinkedText links={links}>{entry.text}</LinkedText>
       </Text>
     </Stack>
   ) : (
     <Stack gap={6}>
       {entry.text && (
         <Text component="div" fz={13} c={palette.ink}>
-          <NoteMarkdown pr={pr}>{entry.text}</NoteMarkdown>
+          <LinkedMarkdown links={links}>{entry.text}</LinkedMarkdown>
         </Text>
       )}
-      <ToolChips pr={pr} tools={entry.tools ?? []} />
+      <ToolChips links={links} tools={entry.tools ?? []} />
     </Stack>
   );
 
 const ToolChips = ({
-  pr,
+  links,
   tools,
 }: {
-  pr: PullRequestDetail;
+  links: FileLinks;
   tools: { name: string; target: string }[];
 }) =>
   tools.length > 0 && (
@@ -129,7 +134,7 @@ const ToolChips = ({
           <Text span inherit c={palette.muted}>
             {tool.name}
           </Text>{" "}
-          <ToolTarget pr={pr} target={tool.target} />
+          <ToolTarget links={links} target={tool.target} />
         </Text>
       ))}
     </Group>
@@ -137,13 +142,13 @@ const ToolChips = ({
 
 // What a tool ran on, a link when it is a file.
 const ToolTarget = ({
-  pr,
+  links,
   target,
 }: {
-  pr: PullRequestDetail;
+  links: FileLinks;
   target: string;
 }) => {
-  const href = fileLinksOf(pr).hrefOf(target);
+  const href = links.hrefOf(target);
   return href ? <FileLink to={href}>{target}</FileLink> : target;
 };
 

@@ -32,6 +32,14 @@ export function fileLinksOf(pr: PullRequestDetail): FileLinks {
   return links;
 }
 
+// Notes with nothing to link their files to, such as a session's before it
+// has a pull request.
+export const NO_FILE_LINKS: FileLinks = {
+  hrefOf: () => null,
+  split: (text) => [text],
+  markdown: { plugin: () => () => {}, components: {} },
+};
+
 // Markdown a person or an agent wrote, with the files it names as links.
 export const NoteMarkdown = ({
   pr,
@@ -39,25 +47,29 @@ export const NoteMarkdown = ({
 }: {
   pr: PullRequestDetail;
   children: string;
-}) => {
-  const { markdown } = fileLinksOf(pr);
-  return (
-    <Markdown plugins={[markdown.plugin]} components={markdown.components}>
-      {children}
-    </Markdown>
-  );
-};
+}) => <LinkedMarkdown links={fileLinksOf(pr)}>{children}</LinkedMarkdown>;
+
+export const LinkedMarkdown = ({
+  links: { markdown },
+  children,
+}: {
+  links: FileLinks;
+  children: string;
+}) => (
+  <Markdown plugins={[markdown.plugin]} components={markdown.components}>
+    {children}
+  </Markdown>
+);
 
 // Plain text with the changed files it names as links.
 export const LinkedText = ({
-  pr,
+  links,
   children,
 }: {
-  pr: PullRequestDetail;
+  links: FileLinks;
   children: string;
-}) => {
-  const links = fileLinksOf(pr);
-  return links.split(children).map((piece, i) =>
+}) =>
+  links.split(children).map((piece, i) =>
     typeof piece === "string" ? (
       <Fragment key={i}>{piece}</Fragment>
     ) : (
@@ -66,7 +78,6 @@ export const LinkedText = ({
       </FileLink>
     ),
   );
-};
 
 export const FileLink = ({
   to,

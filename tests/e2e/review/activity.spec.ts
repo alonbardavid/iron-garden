@@ -46,7 +46,7 @@ test("the files the activity names link to them", async ({ page }) => {
     page.getByRole("link", { name: "packages/metering/src/aggregate.ts" }),
   ).toHaveAttribute(
     "href",
-    `/r/${f.repository}?ref=${f.commits.lockfile}&path=packages/metering/src/aggregate.ts`,
+    `/r/${f.repository}/code?ref=${f.commits.lockfile}&path=packages/metering/src/aggregate.ts`,
   );
   await expect(page.getByRole("link", { name: "pnpm test" })).toHaveCount(0);
 

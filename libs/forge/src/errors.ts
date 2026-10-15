@@ -5,7 +5,9 @@ export type ForgeErrorCode =
   | "BAD_REQUEST"
   | "UNAVAILABLE"
   // Existed once and never will again, such as a closed chat.
-  | "GONE";
+  | "GONE"
+  // Too many requests of a kind; the message says when to try again.
+  | "RATE_LIMITED";
 
 // A refusal the caller should show as is. Anything else thrown from this
 // package is a bug.

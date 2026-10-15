@@ -27,7 +27,7 @@ import { timeAgo } from "../../logic/time";
 import { commitPath } from "../repository/code/paths";
 import { linesText } from "./diff/notes";
 import { useDiscussion, type Thread } from "./discussion";
-import { FileLink, NoteMarkdown } from "./notes/FileLinks";
+import { FileLink, fileLinksOf, NoteMarkdown } from "./notes/FileLinks";
 import { AgentTag, Avatar, Pill, shortSha } from "./notes/parts";
 import { pullRequestPath } from "./paths";
 import {
@@ -287,7 +287,7 @@ const CommitTranscript = ({
       <Box px={16} py={14} style={{ borderTop: `1px solid ${palette.line}` }}>
         {data ? (
           <TranscriptChat
-            pr={pr}
+            links={fileLinksOf(pr)}
             transcript={data}
             ending={
               <Committed

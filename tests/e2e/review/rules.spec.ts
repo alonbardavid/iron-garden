@@ -196,7 +196,10 @@ test("the repository page shows the prompt that starts an agent session", async 
   await signInPage(page, TEST_ADMIN.username, TEST_ADMIN.password);
   await page.goto(`/r/${f.repository}`);
   await page.getByRole("button", { name: "Start session" }).click();
-  const prompt = page.getByText(/Start a .* session on the repository/);
+  // The Sessions page shows the same prompt while there are no sessions.
+  const prompt = page
+    .getByLabel("Start session")
+    .getByText(/Start a .* session on the repository/);
   await expect(prompt).toContainText(`"repository": "${f.repository}"`);
   await expect(prompt).toContainText("/api/sessions");
   await expect(prompt).toContainText("Bearer $IG_AGENT_API_KEY");

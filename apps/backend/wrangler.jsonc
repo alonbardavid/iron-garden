@@ -35,8 +35,8 @@
 		}
 	],
 	// One object per chat channel (an agent's open sockets and waiting polls),
-	// and one per pull request (the revision waiting for the server to group
-	// it, run from an alarm).
+	// one per pull request (the revision waiting for the server to group it,
+	// run from an alarm), and one per agent session (its listener's sockets).
 	"durable_objects": {
 		"bindings": [
 			{
@@ -46,13 +46,18 @@
 			{
 				"name": "PROCESSING",
 				"class_name": "PullRequestProcessor"
+			},
+			{
+				"name": "SESSION_INBOXES",
+				"class_name": "SessionInboxObject"
 			}
 		]
 	},
 	// Declares each Durable Object class; Cloudflare reconciles the list on deploy.
 	"exports": {
 		"ChatChannelObject": { "type": "durable-object", "storage": "sqlite" },
-		"PullRequestProcessor": { "type": "durable-object", "storage": "sqlite" }
+		"PullRequestProcessor": { "type": "durable-object", "storage": "sqlite" },
+		"SessionInboxObject": { "type": "durable-object", "storage": "sqlite" }
 	},
 	// Local dev only simulates sends: .eml files land under
 	// <os-tmpdir>/miniflare-*/email/, which the e2e inbox helper reads.

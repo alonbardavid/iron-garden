@@ -5,6 +5,12 @@ import { agentsContract } from "./agents";
 import { repositoriesContract } from "./repositories";
 import { githubTokensContract, repositoryGithubContract } from "./github";
 import { rulesContract } from "./rules";
+import { repositorySessionsContract } from "./repository-sessions";
+import {
+  sessionAwarenessContract,
+  sessionChatContract,
+  sessionInboxContract,
+} from "./session-awareness";
 import {
   adminContract,
   pullRequestsContract,
@@ -30,6 +36,8 @@ export * from "./repositories";
 export * from "./github";
 export * from "./rules";
 export * from "./review";
+export * from "./repository-sessions";
+export * from "./session-awareness";
 export * from "./activity";
 export * from "./chat";
 
@@ -45,8 +53,14 @@ export const contract = {
     ...repositoriesContract,
     rules: rulesContract,
     github: repositoryGithubContract,
+    sessions: repositorySessionsContract,
   },
-  sessions: sessionsContract,
+  sessions: {
+    ...sessionsContract,
+    ...sessionAwarenessContract,
+    chat: sessionChatContract,
+  },
+  sessionInbox: sessionInboxContract,
   pullRequests: {
     ...pullRequestsContract,
     fromGithub: pullRequestsFromGithubContract,

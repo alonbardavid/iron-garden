@@ -1,11 +1,4 @@
-import {
-  Button,
-  Group,
-  Loader,
-  Modal,
-  SegmentedControl,
-  Stack,
-} from "@mantine/core";
+import { Group, Loader, SegmentedControl, Stack } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +18,6 @@ import {
   StandardForm,
   useForm,
 } from "@lib/ds";
-import { BranchIcon } from "../../components/icons";
 import { errorMessage } from "../../logic/api/errors";
 import { orpc } from "../../logic/api/orpc";
 import { pullRequestPath } from "./paths";
@@ -36,39 +28,8 @@ const SOURCES = [
 ];
 
 // Opens a pull request here from a GitHub pull request or branch, for the
-// server to group. Offered only when the repository is connected to GitHub,
-// the server groups pull requests, and the person can write.
-export const OpenFromGithubButton = ({ name }: { name: string }) => {
-  const [opened, setOpened] = useState(false);
-  const { data } = useQuery(
-    orpc.pullRequests.fromGithub.available.queryOptions({ input: { name } }),
-  );
-  if (!data?.available) {
-    return null;
-  }
-  return (
-    <>
-      <Button
-        variant="default"
-        leftSection={<BranchIcon />}
-        onClick={() => setOpened(true)}
-      >
-        Open from GitHub
-      </Button>
-      <Modal
-        opened={opened}
-        onClose={() => setOpened(false)}
-        title="Open a pull request from GitHub"
-        centered
-        size="lg"
-      >
-        <OpenFromGithubForms name={name} />
-      </Modal>
-    </>
-  );
-};
-
-const OpenFromGithubForms = ({ name }: { name: string }) => {
+// server to group.
+export const OpenFromGithubForms = ({ name }: { name: string }) => {
   const [source, setSource] = useState("pull");
   const open = useOpen(name);
   return (

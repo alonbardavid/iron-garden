@@ -25,11 +25,13 @@
     "bindings": [
       { "name": "CHAT_CHANNELS", "class_name": "ChatChannelObject" },
       { "name": "PROCESSING", "class_name": "PullRequestProcessor" },
+      { "name": "SESSION_INBOXES", "class_name": "SessionInboxObject" },
     ],
   },
   "exports": {
     "ChatChannelObject": { "type": "durable-object", "storage": "sqlite" },
     "PullRequestProcessor": { "type": "durable-object", "storage": "sqlite" },
+    "SessionInboxObject": { "type": "durable-object", "storage": "sqlite" },
   },
   "ai": { "binding": "AI" },
   // Serve on <name>.<subdomain>.workers.dev, the address the app is told to

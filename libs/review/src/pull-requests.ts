@@ -23,6 +23,7 @@ import {
 import { enqueueJob, groupsOnServer } from "@lib/ai";
 import {
   activeSession,
+  recordCommittedFiles,
   isClaude,
   requireAgent,
   type Session,
@@ -198,6 +199,11 @@ export async function createPullRequest(
     ...rules,
   ]);
   await startGrouping({ pullRequestId: id, revision: 1 }, groupedBy);
+  await recordCommittedFiles(
+    session,
+    branchOf(input.branch, diff),
+    diff.files.map((file) => file.path),
+  );
   log.info("pull request created", {
     pullRequestId: id,
     repositoryId: repository.id,
@@ -243,6 +249,11 @@ export async function refreshPullRequest(
   const diff = await readDiff(sessionSource(session), row.branch);
   const groupedBy = await grouperForNewRevision();
   await storeRevision(row, diff, { groupedBy });
+  await recordCommittedFiles(
+    session,
+    branchOf(row.branch, diff),
+    diff.files.map((file) => file.path),
+  );
   return withGrouping(
     repository,
     session,
@@ -842,4 +853,16 @@ async function summarize(
       updatedAt: row.updatedAt.getTime(),
     };
   });
+}
+
+// The pushed branch as the session's working set records it.
+function branchOf(
+  name: string,
+  diff: { headCommit: string; baseCommit: string },
+) {
+  return {
+    name,
+    headCommit: diff.headCommit,
+    mergeBase: diff.baseCommit || null,
+  };
 }

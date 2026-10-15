@@ -103,7 +103,8 @@ the same way (`readShownFiles`), so a changed image shows as its two versions.
 ## Agent sessions and pull requests
 
 `POST /api/sessions` (agent keys only) forks the repository's default branch into a session
-repository and returns its remote, an 8-hour write token for it alone, and the session prompt
+repository and returns its remote (through the worker, see _Sessions working together_), an
+8-hour write token for it alone, and the session prompt
 (`@lib/collab`). The agent pushes a branch there and calls
 `POST /api/sessions/:id/pull-requests`; `@lib/review` diffs the branch against its merge base
 with the forked default branch, stores the changed files, and returns the pull request in
@@ -123,6 +124,57 @@ stores its changes on `pull_request_files`, so progress shows in the pull reques
 opening any diff; marks on changes the revision no longer has are dropped then. Agents read the
 review but cannot accept.
 
+### Sessions working together
+
+A repository opens on its sessions (`/r/:name`; its code is at `/r/:name/code`, and an old
+`/r/:name?ref=…&path=…` link redirects there). `GET /api/repositories/:name/sessions` lists
+every agent's sessions on the repository to anyone who can read it, and `GET …/sessions/:id`
+shows one (`@lib/collab`, `repository-sessions.ts`), its messages only to the people who own its
+agent; tokens and links stay on the owner-only `/api/sessions/:id`. A session's page
+(`/r/:name/sessions/:id`) has an Overview and a Conversations tab (`…/conversations`: its
+transcripts, and its messages to the people who own its agent); the person its agent works for
+also gets the chat dock pull requests have (`components/FloatingDock.tsx`). A session is live while its
+agent called the API, pushed, held its listener or listened for chat within `SESSION_LIVE_MS`
+(`agent_sessions.last_seen_at`, written at most once a minute); active but quieter is idle.
+
+- **Working sets** (`session_files`, `working-set.ts`): `POST /api/sessions/:id/activity`
+  declares the files a session is editing, each lapsing 30 minutes after the last report naming
+  it. The files a session branch changes are `committed` entries, replaced whenever the branch is
+  seen: a pull request opened or refreshed, or a push through the session remote. They go when
+  the branch's pull request merges or closes or the branch is deleted, and lapse 7 days after an
+  ended session that left the branch without one. Such a branch (`session_branches`) is
+  _unmerged_ work, which someone with Write can dismiss.
+- **Session remote**: the session's git remote is the worker, `/<session id>.git`, which passes
+  the session's own Artifacts token through (Artifacts checks it) and reads each push's
+  ref-update commands (`pushedBranches` in `@lib/git-host`) to record the branches it moved once
+  the push lands. Session ids are upper-case `SES_`, which repository names never are.
+- **Collisions** (`session_collisions`, `collisions.ts`): a `mark-exclusive` rule (file patterns
+  only, never copied onto a pull request) marks files only one session should hold. When a
+  session's working set gains such a file and another session holds it, the collision is
+  recorded once per pair and file and only the session that took it is told; it resolves when
+  either side lets the file go. Each kind of collision is a detector; exclusive files are the
+  only one so far.
+- **Notifications** (`session_notifications`): a collision notice, a message, an
+  `undelivered` notice or a `chat` message. A session gets them in the activity response, from
+  `GET /api/sessions/:id/notifications`, or from its listener at `/api/session-inbox/<key>`
+  (a socket held by `SessionInboxObject`, binding `SESSION_INBOXES`, or a poll). The key is the
+  URL's only credential, stored as a hash, replaced by `POST /api/sessions/:id/listen`.
+- **Messages**: `POST /api/sessions/:id/messages` sends to another active session of the same
+  repository, at most 30 an hour and 5 unanswered to one session; the messages a session never
+  fetched go back to their senders as `undelivered` when it ends. A session may publish a
+  `contact` (URLs, an email) that the platform never calls. Admin › Agent config turns
+  messaging off: messages are refused and wait, contacts are hidden, and new session prompts
+  leave out the section (the `messaging` prompt condition).
+- **Chat** (`session_chat_messages`, `session-chat.ts`): the person a session's agent works for,
+  and nobody else, chats with it from a dock on the session's page (`GET`/`POST
+/api/repositories/:name/sessions/:id/chat`). Each message reaches the agent as a `chat`
+  notice on its listener, whatever the messaging switch says, and counts as delivered once the
+  agent fetched that notice; the agent answers with `POST /api/sessions/:id/chat`. Unlike chat
+  on a pull request, it needs no pull request and no listener of its own. Once the session
+  ends the thread is read-only.
+
+The design behind these is in [specs/session-awareness.md](specs/session-awareness.md).
+
 ### Transcripts, comments and reviews
 
 A pull request keeps the commits its branch adds over the session's base (`pull_request_commits`,
@@ -130,9 +182,14 @@ first-parent, at most 250), re-read on every refresh. A transcript (`transcripts
 session and reaches a commit one of two ways: the agent uploads it naming the commit
 (`POST /api/sessions/:id/transcripts` with `commit`), or the commit's `Agent-Transcript:` trailer
 names it — an id the agent uploaded without a commit, or the path of a transcript file in the
-commit, which is read, stored and left out of the reviewed files. Entries are a person's prompt
-or what the agent said, with the tools it ran. Claude sends an outline of the conversation and
-its steps, rephrased in order, rather than a raw transcript.
+commit, which is read, stored and left out of the reviewed files. The session prompt has agents
+upload as they go: after each request they finish, they post the new entries with `appendTo`
+naming the commit's transcript so far, which stamps its `updated_at`; once a commit names a
+transcript it takes no more entries, and the next commit's starts afresh. Entries are a person's
+prompt or what the agent said, with the tools it ran. Claude sends an outline of the conversation
+and its steps, rephrased in order, rather than a raw transcript. A session's Conversations tab
+lists all its transcripts, committed or not, newest first and open, re-read every 30 seconds
+while the session is active.
 
 Comments (`pull_request_comments`) sit on a line range, counted like group ranges, with one
 level of replies. A person's comment, flag or accept is a draft, seen only by them, until their
@@ -320,6 +377,12 @@ from the target's tip, and the server groups every revision. A sync that moves i
 (a push delivery, or a full sync) stores a new revision; while the server does not group, that
 revision opens without groups and says why. Nothing is pushed back to GitHub for it, and a
 branch deleted on GitHub closes it.
+
+The pull request list's _Import_ button always opens a dialog. Its _By agent_ tab is a prompt
+for an agent that already has the branch and its pull request elsewhere: start a session, push
+the branch to it unchanged and open the pull request through the session API
+(`importPrompt` in the SPA). A _From GitHub_ tab with the two forms above sits beside it while
+opening from GitHub is available.
 
 ### Workflow rules
 

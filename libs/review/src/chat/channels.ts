@@ -13,8 +13,10 @@ import type { ChatEndpoints } from "@lib/contract";
 import { authorizeId, ForgeError } from "@lib/forge";
 import type { AgentPrincipal, Principal } from "@lib/identity";
 import { moduleLogger } from "@lib/logging";
-import { hashChatKey, newChatKey } from "./keys";
+import { hashUrlKey, newUrlKey } from "@lib/collab";
 import { relay } from "./relay";
+
+const CHAT_KEY_PREFIX = "cgit_chat_";
 
 const log = moduleLogger("review/chat/channels");
 
@@ -66,8 +68,8 @@ export async function openChannel(
   sessionId: string | null,
   endpointsFor: ChatEndpointsFor,
 ): Promise<ChatEndpoints> {
-  const key = newChatKey();
-  const keyHash = await hashChatKey(key);
+  const key = newUrlKey(CHAT_KEY_PREFIX);
+  const keyHash = await hashUrlKey(key);
   const [channel] = await getDb()
     .insert(chatChannels)
     .values({
@@ -97,7 +99,7 @@ export async function openChannel(
 // agent should stop listening.
 export async function channelByKey(key: string): Promise<OpenChannel> {
   const channel = await findChannel(
-    eq(chatChannels.keyHash, await hashChatKey(key)),
+    eq(chatChannels.keyHash, await hashUrlKey(key)),
   );
   if (!channel) {
     log.info("chat key unknown");

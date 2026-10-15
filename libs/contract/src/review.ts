@@ -1,6 +1,7 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 import { chatEndpointsSchema } from "./chat";
+import { contactSchema, listenEndpointsSchema } from "./session-awareness";
 import {
   changedFileContentsSchema,
   changedFileSchema,
@@ -48,6 +49,7 @@ export const sessionDetailsSchema = z.object({
   title: z.string().trim().max(200).nullable().optional(),
   goal: markdown(20_000),
   context: markdown(50_000),
+  contact: contactSchema.nullable().optional(),
 });
 
 export const sessionSchema = z.object({
@@ -60,17 +62,24 @@ export const sessionSchema = z.object({
   status: z.enum(["active", "ended"]),
   baseBranch: z.string(),
   baseCommit: z.string().nullable(),
+  contact: contactSchema,
   createdAt: z.number(),
   updatedAt: z.number(),
 });
 export type Session = z.infer<typeof sessionSchema>;
 
 export const sessionLinksSchema = z.object({
+  remote: z.string(),
   session: z.string(),
   token: z.string(),
   pullRequests: z.string(),
   transcripts: z.string(),
   end: z.string(),
+  activity: z.string(),
+  notifications: z.string(),
+  messages: z.string(),
+  listen: z.string(),
+  chat: z.string(),
 });
 
 export const gitTokenSchema = z.object({
@@ -87,6 +96,8 @@ export const startedSessionSchema = z.object({
   }),
   instructions: z.string(),
   links: sessionLinksSchema,
+  // Where the session's listener connects for notifications and messages.
+  listen: listenEndpointsSchema,
 });
 
 export const lineRangeSchema = z.object({
@@ -563,6 +574,8 @@ export const agentConfigInputSchema = z.object({
     .int("A whole number of words")
     .min(0, "0 sends no transcripts")
     .max(MAX_TRANSCRIPT_WORDS, `At most ${MAX_TRANSCRIPT_WORDS} words`),
+  // Whether sessions may message each other and see each other's contacts.
+  sessionMessaging: z.boolean().default(true),
 });
 export type AgentConfigInput = z.input<typeof agentConfigInputSchema>;
 
@@ -582,6 +595,7 @@ export const agentConfigSchema = z.object({
   model: z.string(),
   gateway: z.string().nullable(),
   maxTranscriptWords: z.number(),
+  sessionMessaging: z.boolean(),
   defaultModel: z.string(),
   // The gateway used while `gateway` is null.
   defaultGateway: z.string(),

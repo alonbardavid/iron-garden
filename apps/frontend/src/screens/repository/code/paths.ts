@@ -7,7 +7,7 @@ export function codePath(
   path: string,
   ref?: string,
 ): string {
-  return withQuery(`/r/${repository}`, { ref, path });
+  return withQuery(`/r/${repository}/code`, { ref, path });
 }
 
 // Where ref's history is listed.
