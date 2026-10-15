@@ -90,10 +90,6 @@ const REFERENCE_SIDE = {
   number: palette.referenceNumber,
   opacity: 0.58,
 };
-const RENAMED: CSSProperties = {
-  textDecoration: `underline dotted ${REFERENCE_INK}`,
-  textUnderlineOffset: 3,
-};
 
 // Left of the line numbers: a block's box, a change's bar, then the column
 // for comments and traces.
@@ -1347,7 +1343,6 @@ const CopiedSide = ({
 }) => {
   const line = file.lines[index]!;
   const kind = KIND.added;
-  const renamed = copied.match === "rename";
   return (
     <div
       style={{
@@ -1375,9 +1370,7 @@ const CopiedSide = ({
       >
         <Pieces
           pieces={paintSpans(line.text, file.lang, copied.spans)}
-          marked={
-            renamed ? RENAMED : { background: kind.mark, borderRadius: 2 }
-          }
+          marked={{ background: kind.mark, borderRadius: 2 }}
         />
       </span>
     </div>
