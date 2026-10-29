@@ -41,6 +41,12 @@ export class GithubError extends Error {
   }
 }
 
+// One page of a list GitHub serves `perPage` at a time, from page 1.
+export interface GithubPage {
+  perPage: number;
+  page: number;
+}
+
 // What a token tells GitHub about itself when it is first used.
 export interface TokenIdentity {
   login: string;
@@ -254,21 +260,33 @@ export function githubApi(token: string) {
         .parse(await response.json()).statuses;
     },
 
-    async jobs(owner: string, repo: string, runId: number) {
+    async jobs(owner: string, repo: string, runId: number, page: GithubPage) {
       const response = await call(
-        `/repos/${owner}/${repo}/actions/runs/${runId}/jobs?per_page=100`,
+        `/repos/${owner}/${repo}/actions/runs/${runId}/jobs?${pageQuery(page)}`,
       );
-      return z.object({ jobs: z.array(jobSchema) }).parse(await response.json())
-        .jobs;
+      return {
+        items: z
+          .object({ jobs: z.array(jobSchema) })
+          .parse(await response.json()).jobs,
+        hasNext: hasNextPage(response),
+      };
     },
 
-    async artifacts(owner: string, repo: string, runId: number) {
+    async artifacts(
+      owner: string,
+      repo: string,
+      runId: number,
+      page: GithubPage,
+    ) {
       const response = await call(
-        `/repos/${owner}/${repo}/actions/runs/${runId}/artifacts?per_page=100`,
+        `/repos/${owner}/${repo}/actions/runs/${runId}/artifacts?${pageQuery(page)}`,
       );
-      return z
-        .object({ artifacts: z.array(artifactSchema) })
-        .parse(await response.json()).artifacts;
+      return {
+        items: z
+          .object({ artifacts: z.array(artifactSchema) })
+          .parse(await response.json()).artifacts,
+        hasNext: hasNextPage(response),
+      };
     },
 
     // GitHub answers a download with a redirect to a URL that works without
@@ -378,6 +396,15 @@ async function errorMessage(response: Response): Promise<string> {
   } catch {
     return body.slice(0, 200);
   }
+}
+
+function pageQuery({ perPage, page }: GithubPage): string {
+  return `per_page=${perPage}&page=${page}`;
+}
+
+// GitHub links the next page from the Link header while there is one.
+function hasNextPage(response: Response): boolean {
+  return /rel="next"/.test(response.headers.get("link") ?? "");
 }
 
 function redirectTarget(response: Response): string {

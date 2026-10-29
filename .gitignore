@@ -4,6 +4,7 @@ node_modules
 
 # Build outputs
 dist
+.astro
 .turbo
 *.tsbuildinfo
 
@@ -16,6 +17,7 @@ dist
 # Cloudflare
 .wrangler
 .wrangler-test
+.wrangler-docs
 apps/backend/public
 
 # Local dev databases

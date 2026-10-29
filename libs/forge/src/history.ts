@@ -4,6 +4,7 @@ import {
   type Commit,
   type PathFile,
 } from "@lib/git-host";
+import { searchTerms } from "@lib/db-models";
 import type { Principal } from "@lib/identity";
 import { moduleLogger } from "@lib/logging";
 import { notFound } from "./errors";
@@ -17,25 +18,39 @@ export interface BranchInfo {
   isDefault: boolean;
 }
 
-// The repository's branches for anyone who can read it, its default branch
-// first and the rest by name.
-export async function listBranches(
+// Up to `limit` of the repository's branches whose name holds every word of
+// `q` (ignoring case), for anyone who can read it: the default branch first
+// when it matches, the rest by name.
+export async function searchBranches(
   principal: Principal,
   name: string,
+  q: string,
+  limit: number,
 ): Promise<BranchInfo[]> {
   const repository = await authorize(principal, name, "read");
   requireGit();
   const { branches } = await getGitHost().branches(repository.artifactsName);
-  log.debug("branches listed", {
-    repositoryId: repository.id,
-    count: branches.length,
-  });
-  return branches
+  const words = searchTerms(q).map((word) => word.toLowerCase());
+  const found = branches
+    .filter((branch) =>
+      words.every((word) => branch.name.toLowerCase().includes(word)),
+    )
     .map((branch) => ({
       ...branch,
       isDefault: branch.name === repository.defaultBranch,
     }))
-    .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+    .sort(
+      (a, b) =>
+        Number(b.isDefault) - Number(a.isDefault) ||
+        a.name.localeCompare(b.name),
+    )
+    .slice(0, limit);
+  log.debug("branches searched", {
+    repositoryId: repository.id,
+    count: branches.length,
+    found: found.length,
+  });
+  return found;
 }
 
 // A page of ref's history, newest first; the default branch when ref is left

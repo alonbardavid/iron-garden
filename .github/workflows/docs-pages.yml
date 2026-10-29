@@ -1,0 +1,101 @@
+name: Docs to GitHub Pages
+
+# Publishes the operating docs (apps/docs) to the gh-pages branch, which
+# GitHub Pages serves (Settings > Pages > Deploy from a branch: gh-pages, /).
+# Each run replaces the branch with one commit: the docs' history is main's.
+#
+# A push skips publishing unless Pages serves gh-pages. Settings can only pick
+# a branch that exists, so a run by hand publishes the branch regardless.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: docs-pages
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pages: read
+
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+      ready: ${{ steps.check.outputs.ready }}
+      url: ${{ steps.check.outputs.url }}
+    steps:
+      # Pages' address, custom domain included; before Pages is on, the
+      # project-site default.
+      - name: Check GitHub Pages
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          setup="Settings > Pages > Deploy from a branch: gh-pages, / (root)."
+          if pages=$(gh api "repos/${GITHUB_REPOSITORY}/pages" 2>/dev/null) &&
+            [ "$(jq -r '"\(.build_type) \(.source.branch)"' <<<"$pages")" = "legacy gh-pages" ]; then
+            url=$(jq -r .html_url <<<"$pages")
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            url="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          else
+            echo "::notice::GitHub Pages does not serve gh-pages, so the docs are not published. To publish them, run this workflow by hand once, then set ${setup}"
+            exit 0
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          echo "url=${url%/}/" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: pages
+    if: needs.pages.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DOCS_URL: ${{ needs.pages.outputs.url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the docs
+        run: pnpm exec turbo run build --filter=@app/docs
+
+      # .nojekyll: Pages would otherwise run Jekyll, which drops _astro/.
+      # CNAME: Pages keeps a custom domain in the branch, so each push restates it.
+      - name: Push to gh-pages
+        working-directory: apps/docs/dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          touch .nojekyll
+          host=${DOCS_URL#https://}
+          host=${host%%/*}
+          if [[ $host != *.github.io ]]; then echo "$host" > CNAME; fi
+          git init --quiet --initial-branch gh-pages
+          git add --all
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet --message "Docs from ${GITHUB_SHA}"
+          git push --force --quiet \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          echo "Published to ${DOCS_URL}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Point GitHub Pages at gh-pages
+        if: needs.pages.outputs.ready != 'true'
+        run: |
+          echo "::warning::Published gh-pages, which GitHub Pages does not serve yet. Set Settings > Pages > Deploy from a branch: gh-pages, / (root)."

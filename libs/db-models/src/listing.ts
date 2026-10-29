@@ -141,6 +141,11 @@ export async function paginate<
   };
 }
 
+// The words of a search box, for matchesAllTerms; none when it is empty.
+export function searchTerms(q: string | undefined): string[] {
+  return (q ?? "").trim().split(/\s+/).filter(Boolean);
+}
+
 // A "contains every term" search, with LIKE wildcards in the terms escaped.
 export function matchesAllTerms(
   expression: SQLiteColumn | SQL,

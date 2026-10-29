@@ -9,6 +9,14 @@ import {
   MAX_COMMITS_PAGE,
   pathContentsSchema,
 } from "./files";
+import {
+  LIST_DEFAULT_LIMIT,
+  listPageSchema,
+  listQuerySchema,
+  pageQuerySchema,
+  searchQuerySchema,
+  searchResultsSchema,
+} from "./listing";
 import { nameSchema } from "./names";
 import { userSummarySchema } from "./account";
 import { githubRepositoryRefSchema } from "./github";
@@ -67,14 +75,28 @@ export const agentGrantSchema = z.object({
   // What the agent can actually do: never more than its owner.
   effective: z.enum(ACCESS_LEVELS).nullable(),
 });
+export type AgentGrant = z.infer<typeof agentGrantSchema>;
 
 const byName = z.object({ name: z.string() });
 const ok = z.object({ ok: z.literal(true) });
 
 export const repositoriesContract = {
+  // The repositories the caller can read, by name; `q` keeps those whose
+  // name holds every word of it.
   list: oc
     .route({ method: "GET", path: "/api/repositories" })
-    .output(z.array(repositoryListItemSchema)),
+    .input(
+      listQuerySchema(repositorySchema, {
+        sorts: ["name", "createdAt", "updatedAt"],
+        filters: {},
+      }),
+    )
+    .output(listPageSchema(repositoryListItemSchema)),
+  // The first readable repositories whose name holds every word of `q`.
+  search: oc
+    .route({ method: "GET", path: "/api/search/repositories" })
+    .input(searchQuerySchema)
+    .output(searchResultsSchema(repositorySchema)),
   create: oc
     .route({ method: "POST", path: "/api/repositories" })
     .input(
@@ -118,11 +140,12 @@ export const repositoriesContract = {
     .route({ method: "GET", path: "/api/repositories/{name}/files" })
     .input(byName.extend({ ref: z.string().min(1).max(200).optional() }))
     .output(z.object({ paths: z.array(z.string()), truncated: z.boolean() })),
-  // Every branch, the default one first.
+  // The first branches whose name holds every word of `q`, the default one
+  // first when it does.
   branches: oc
     .route({ method: "GET", path: "/api/repositories/{name}/branches" })
-    .input(byName)
-    .output(z.array(branchInfoSchema)),
+    .input(searchQuerySchema.extend(byName.shape))
+    .output(searchResultsSchema(branchInfoSchema)),
   // A page of ref's history (a branch or commit; the default branch when left
   // out), newest first.
   commits: oc
@@ -136,7 +159,7 @@ export const repositoriesContract = {
           .int()
           .min(1)
           .max(MAX_COMMITS_PAGE)
-          .default(30),
+          .default(LIST_DEFAULT_LIMIT),
       }),
     )
     .output(z.object({ commits: z.array(commitSchema), hasMore: z.boolean() })),
@@ -173,15 +196,28 @@ export const repositoriesContract = {
     .input(byName)
     .output(ok),
   members: {
+    // The people with access, by name.
     list: oc
       .route({ method: "GET", path: "/api/repositories/{name}/members" })
-      .input(byName)
-      .output(
-        z.object({
-          members: z.array(memberSchema),
-          agents: z.array(agentGrantSchema),
-        }),
-      ),
+      .input(byName.extend(pageQuerySchema().shape))
+      .output(listPageSchema(memberSchema)),
+    // The agents granted access, by name.
+    agents: oc
+      .route({
+        method: "GET",
+        path: "/api/repositories/{name}/members/agents",
+      })
+      .input(byName.extend(pageQuerySchema().shape))
+      .output(listPageSchema(agentGrantSchema)),
+    // The first members whose name, username or email between them hold
+    // every word of `q`, by name.
+    search: oc
+      .route({
+        method: "GET",
+        path: "/api/repositories/{name}/members/search",
+      })
+      .input(byName.extend(searchQuerySchema.shape))
+      .output(searchResultsSchema(memberSchema)),
     set: oc
       .route({
         method: "PUT",

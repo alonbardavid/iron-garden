@@ -24,7 +24,7 @@ It is a rulebook, not a changelog.
   or anything one `grep` would answer. Put it in the right doc and link to it: `README.md`
   indexes them — architecture, development, deployment and emails live under `docs/`, a lib's
   reference in its own `README.md`, test traps in `tests/README.md`, code-review rules in
-  `.claude/commands/check-conventions.md`.
+  `.claude/commands/check-conventions.md`, and what an operator needs in `apps/docs` (`/docs/`).
 - Memory goes in this project file, not per-user memory (`~/.claude/…`).
 
 ## Working practices

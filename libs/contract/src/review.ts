@@ -10,6 +10,12 @@ import {
 import { branchSchema } from "./repositories";
 import { RULE_ACTIONS, ruleMatchSchema, ruleWorkflowSchema } from "./rules";
 import { GITHUB_PULL_STATES, githubPullStatusSchema } from "./github";
+import {
+  listPageSchema,
+  listQuerySchema,
+  searchQuerySchema,
+  searchResultsSchema,
+} from "./listing";
 
 // Mirrors GROUP_KINDS in @lib/review, which checks them on submit.
 export const GROUP_KINDS = [
@@ -332,11 +338,36 @@ const byNumber = byRepository.extend({
   number: z.coerce.number<number>().int().min(1),
 });
 
+// How many of a repository's pull requests each status filter keeps: "open"
+// counts those still processing too.
+export const pullRequestCountsSchema = z.object({
+  open: z.number(),
+  processing: z.number(),
+  merged: z.number(),
+  closed: z.number(),
+});
+export type PullRequestCounts = z.infer<typeof pullRequestCountsSchema>;
+
 export const pullRequestsContract = {
+  // Newest first; `status` "open" keeps those still processing too, and `q`
+  // keeps those whose title holds every word of it.
   list: oc
     .route({ method: "GET", path: "/api/repositories/{name}/pull-requests" })
+    .input(
+      listQuerySchema(pullRequestSummarySchema, {
+        sorts: ["number", "createdAt", "updatedAt"],
+        filters: { status: z.enum(PULL_REQUEST_STATUSES).optional() },
+        defaultDir: "desc",
+      }).extend(byRepository.shape),
+    )
+    .output(listPageSchema(pullRequestSummarySchema)),
+  counts: oc
+    .route({
+      method: "GET",
+      path: "/api/repositories/{name}/pull-requests/counts",
+    })
     .input(byRepository)
-    .output(z.array(pullRequestSummarySchema)),
+    .output(pullRequestCountsSchema),
   get: oc
     .route({
       method: "GET",
@@ -478,14 +509,15 @@ export const pullRequestsFromGithubContract = {
     .input(byRepository)
     .output(z.object({ available: z.boolean() })),
   // The open GitHub pull requests from the repository's own branches that no
-  // pull request here stands for yet.
+  // pull request here stands for yet, whose title, number or branch holds
+  // every word of `q`.
   pulls: oc
     .route({
       method: "GET",
       path: "/api/repositories/{name}/pull-requests/from-github/pulls",
     })
-    .input(byRepository)
-    .output(z.array(githubPullOptionSchema)),
+    .input(searchQuerySchema.extend(byRepository.shape))
+    .output(searchResultsSchema(githubPullOptionSchema)),
   open: oc
     .route({
       method: "POST",

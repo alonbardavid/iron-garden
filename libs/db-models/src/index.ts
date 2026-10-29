@@ -101,6 +101,7 @@ export { getDb, checkHealth, type Db } from "./db";
 export {
   paginate,
   matchesAllTerms,
+  searchTerms,
   escapeLikePattern,
   LIST_TOTAL_CAP,
   type ListRequest,

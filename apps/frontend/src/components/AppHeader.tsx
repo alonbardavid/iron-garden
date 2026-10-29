@@ -8,6 +8,7 @@ import {
 } from "@mantine/core";
 import { Fragment, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { DOCS_PATH } from "@lib/contract/constants";
 import { palette } from "@lib/ds";
 import { useSignedInMe } from "../logic/authentication/useMe";
 import { useLogout } from "../logic/authentication/useLogout";
@@ -117,6 +118,10 @@ const UserMenu = () => {
             Admin
           </Menu.Item>
         )}
+        {/* A full page load: the docs are not part of the SPA. */}
+        <Menu.Item component="a" href={DOCS_PATH}>
+          Documentation
+        </Menu.Item>
         <AppearanceMenu />
         <Menu.Divider />
         <Menu.Item onClick={logout}>Sign out</Menu.Item>

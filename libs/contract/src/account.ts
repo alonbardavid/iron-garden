@@ -1,5 +1,11 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import {
+  listPageSchema,
+  listQuerySchema,
+  searchQuerySchema,
+  searchResultsSchema,
+} from "./listing";
 import { nameSchema } from "./names";
 
 export const ROLES = ["user", "admin"] as const;
@@ -78,13 +84,25 @@ export const setupContract = {
 
 export const accountContract = {
   me: oc.route({ method: "GET", path: "/api/me" }).output(meSchema),
-  users: oc
-    .route({ method: "GET", path: "/api/users" })
-    .output(z.array(userSummarySchema)),
+  // The first active users whose name, username or email between them hold
+  // every word of `q`, by name: who can be added to a repository.
+  searchUsers: oc
+    .route({ method: "GET", path: "/api/search/users" })
+    .input(searchQuerySchema)
+    .output(searchResultsSchema(userSummarySchema)),
   keys: {
+    // The caller's personal keys, newest first; `q` keeps those whose name
+    // holds every word of it.
     list: oc
       .route({ method: "GET", path: "/api/account/keys" })
-      .output(z.array(keySchema)),
+      .input(
+        listQuerySchema(keySchema, {
+          sorts: ["createdAt"],
+          filters: {},
+          defaultDir: "desc",
+        }),
+      )
+      .output(listPageSchema(keySchema)),
     create: oc
       .route({ method: "POST", path: "/api/account/keys" })
       .input(createKeyInputSchema)

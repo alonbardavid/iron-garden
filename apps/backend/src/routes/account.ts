@@ -1,10 +1,11 @@
 import { ORPCError } from "@orpc/server";
+import { AUTOCOMPLETE_LIMIT } from "@lib/contract";
 import {
   createKey,
   getUserProfile,
-  listKeys,
-  listUserProfiles,
+  listPersonalKeys,
   revokeKey,
+  searchUserProfiles,
 } from "@lib/identity";
 import { requireUser } from "@lib/forge";
 import { api, signedInApi } from "./api";
@@ -30,16 +31,16 @@ export const me = signedInApi.me.handler(async ({ context: { principal } }) => {
   };
 });
 
-// Everyone signed in can see who else is on the instance, to add them to a
+// Everyone signed in can find who else is on the instance, to add them to a
 // repository.
-export const users = api.users.handler(async () =>
-  (await listUserProfiles()).map(toUser),
+export const searchUsers = api.searchUsers.handler(async ({ input }) =>
+  (await searchUserProfiles(input.q, AUTOCOMPLETE_LIMIT)).map(toUser),
 );
 
 export const keys = api.keys.router({
-  list: api.keys.list.handler(({ context: { principal } }) => {
+  list: api.keys.list.handler(({ context: { principal }, input }) => {
     requireUser(principal);
-    return listKeys({ userId: principal.userId, agentId: null });
+    return listPersonalKeys(principal.userId, input);
   }),
   create: api.keys.create.handler(({ context: { principal }, input }) => {
     requireUser(principal);

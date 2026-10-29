@@ -7,17 +7,22 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { WorkflowArtifact, WorkflowJob } from "@lib/contract";
 import { palette } from "@lib/ds";
+import { ShowMore } from "../../../components/ShowMore";
 import { orpc } from "../../../logic/api/orpc";
 import { errorMessage } from "../../../logic/api/errors";
+import {
+  nextPage,
+  type PagedList,
+  usePagedList,
+} from "../../../logic/api/paging";
 import { formatBytes } from "../../../logic/bytes";
 import { useRepository } from "../RepositoryLayout";
 import { outcomeOf } from "./status";
 
-// A run's jobs and artifacts, read from GitHub when opened.
+// A run's jobs and artifacts, read from GitHub a page at a time when opened.
 export const RunDetails = ({ runId }: { runId: number }) => (
   <SimpleGrid
     cols={2}
@@ -34,14 +39,16 @@ export const RunDetails = ({ runId }: { runId: number }) => (
 
 const Jobs = ({ runId }: { runId: number }) => {
   const { name } = useRepository();
-  const { data: jobs, error } = useQuery(
-    orpc.repositories.github.jobs.queryOptions({ input: { name, runId } }),
+  const list = usePagedList(
+    orpc.repositories.github.jobs.infiniteOptions({
+      input: (cursor) => ({ name, runId, cursor }),
+      ...nextPage,
+    }),
   );
   return (
     <Section
       title="Jobs"
-      items={jobs}
-      error={error}
+      list={list}
       empty="No jobs."
       renderItem={(job) => <JobRow key={job.id} job={job} />}
     />
@@ -75,14 +82,16 @@ const JobRow = ({ job }: { job: WorkflowJob }) => {
 
 const Artifacts = ({ runId }: { runId: number }) => {
   const { name } = useRepository();
-  const { data: artifacts, error } = useQuery(
-    orpc.repositories.github.artifacts.queryOptions({ input: { name, runId } }),
+  const list = usePagedList(
+    orpc.repositories.github.artifacts.infiniteOptions({
+      input: (cursor) => ({ name, runId, cursor }),
+      ...nextPage,
+    }),
   );
   return (
     <Section
       title="Artifacts"
-      items={artifacts}
-      error={error}
+      list={list}
       empty="No artifacts."
       renderItem={(artifact) => (
         <ArtifactRow key={artifact.id} artifact={artifact} />
@@ -120,8 +129,7 @@ const ArtifactRow = ({ artifact }: { artifact: WorkflowArtifact }) => {
 
 interface SectionProps<T> {
   title: string;
-  items: T[] | undefined;
-  error: unknown;
+  list: PagedList & { items: T[] | undefined; error: unknown };
   empty: string;
   renderItem: (item: T) => ReactNode;
 }
@@ -136,11 +144,11 @@ const Section = <T,>({ title, ...body }: SectionProps<T>) => (
 );
 
 const SectionBody = <T,>({
-  items,
-  error,
+  list,
   empty,
   renderItem,
 }: Omit<SectionProps<T>, "title">) => {
+  const { items, error } = list;
   if (error) {
     return (
       <Text size="sm" c="red">
@@ -158,7 +166,12 @@ const SectionBody = <T,>({
       </Text>
     );
   }
-  return <>{items.map(renderItem)}</>;
+  return (
+    <>
+      {items.map(renderItem)}
+      <ShowMore list={list} />
+    </>
+  );
 };
 
 // GitHub hands out logs and artifacts as short-lived links, so each is asked

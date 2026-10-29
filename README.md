@@ -72,6 +72,9 @@ suite; and `main` deploys to staging and production. See
 
 ## Docs
 
+Running an instance is covered by the operating docs, served by every instance at `/docs/`
+([source](apps/docs/README.md)). The rest is for working on the code:
+
 - [Architecture](docs/architecture.md) — layout, the API contract, identity and keys, git hosting, agent sessions, GitHub
 - [Logging](libs/logging/README.md) — `moduleLogger`, request context, verbosity
 - [Diff](libs/diff/README.md) — the line diff and the changes a reviewer accepts

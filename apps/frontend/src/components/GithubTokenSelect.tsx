@@ -1,30 +1,31 @@
 import { Anchor } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { FormSelect } from "@lib/ds";
+import type { GithubToken } from "@lib/contract";
 import { orpc } from "../logic/api/orpc";
+import { FormSearchSelect } from "./SearchSelect";
 
-// A form's `tokenId` field: one of the signed-in user's GitHub tokens.
-export const GithubTokenSelect = () => {
-  const { data: tokens } = useQuery(orpc.githubTokens.list.queryOptions());
-  return (
-    <FormSelect
-      name="tokenId"
-      label="GitHub token"
-      data={(tokens ?? []).map((token) => ({
-        value: token.id,
-        label: `${token.name} (${token.githubLogin})`,
-      }))}
-      placeholder={tokens?.length === 0 ? "No tokens yet" : "Pick one of yours"}
-      description={
-        <>
-          Your tokens are under{" "}
-          <Anchor component={Link} to="/account/github-tokens" size="xs">
-            Account › GitHub tokens
-          </Anchor>
-          .
-        </>
-      }
-    />
-  );
-};
+// A form's `tokenId` field: one of the signed-in user's GitHub tokens, found
+// by name or GitHub login.
+export const GithubTokenSelect = () => (
+  <FormSearchSelect
+    name="tokenId"
+    label="GitHub token"
+    search={(q) => orpc.githubTokens.search.queryOptions({ input: { q } })}
+    toOption={toOption}
+    placeholder="Search your tokens"
+    nothingFoundMessage="None of your tokens matches"
+    description={
+      <>
+        Your tokens are under{" "}
+        <Anchor component={Link} to="/account/github-tokens" size="xs">
+          Account › GitHub tokens
+        </Anchor>
+        .
+      </>
+    }
+  />
+);
+
+function toOption(token: GithubToken) {
+  return { value: token.id, label: `${token.name} (${token.githubLogin})` };
+}

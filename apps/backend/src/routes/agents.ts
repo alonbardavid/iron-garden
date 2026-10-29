@@ -33,9 +33,10 @@ async function ownedAgent(principal: Principal, name: string): Promise<Agent> {
 }
 
 export const agents = api.agents.router({
-  list: api.agents.list.handler(async ({ context: { principal } }) => {
+  list: api.agents.list.handler(async ({ context: { principal }, input }) => {
     requireUser(principal);
-    return (await listAgents(principal.userId)).map(toAgent);
+    const page = await listAgents(principal.userId, input);
+    return { ...page, items: page.items.map(toAgent) };
   }),
   create: api.agents.create.handler(
     async ({ context: { principal }, input }) => {

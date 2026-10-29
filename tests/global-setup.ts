@@ -10,6 +10,8 @@ import { buildGithubFixtureSql } from "./e2e/github/fixture";
 import { buildSessionsFixtureSql } from "./e2e/sessions/fixture";
 import { buildCollideFixtureSql } from "./e2e/sessions/collide-fixture";
 import { buildActivityFixtureSql } from "./e2e/review/activity-fixture";
+import { buildListingFixtureSql } from "./e2e/listing/fixture";
+import { buildReviewListingFixtureSql } from "./e2e/listing/review-fixture";
 import { RESET_USER, TEST_ADMIN, TEST_USER } from "./e2e/users";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -111,5 +113,19 @@ export default async function globalSetup() {
     "DB",
     "--command",
     await buildGithubFixtureSql(),
+  ]);
+
+  console.log("[global-setup] seeding more repositories than a page holds");
+  runWrangler(["d1", "execute", "DB", "--command", buildListingFixtureSql()]);
+
+  console.log(
+    "[global-setup] seeding more pull requests and rules than a page holds",
+  );
+  runWrangler([
+    "d1",
+    "execute",
+    "DB",
+    "--command",
+    buildReviewListingFixtureSql(),
   ]);
 }

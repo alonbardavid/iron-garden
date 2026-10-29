@@ -102,26 +102,32 @@ async function serverGroups(page: Page) {
       ? route.fulfill({ json: { available: true } })
       : route.fallback(),
   );
-  await page.route(`**${fromGithub}/pulls`, (route) =>
-    route.fulfill({
-      json: [
-        {
-          number: 41,
-          title: "Add sign-up",
-          branch: "feature/signup",
-          targetBranch: "main",
-          url: `https://github.com/${f.owner}/${f.repo}/pull/41`,
-          author: "octocat",
-        },
-      ],
-    }),
+  await page.route(
+    (url) => url.pathname === `${fromGithub}/pulls`,
+    (route) =>
+      route.fulfill({
+        json: [
+          {
+            number: 41,
+            title: "Add sign-up",
+            branch: "feature/signup",
+            targetBranch: "main",
+            url: `https://github.com/${f.owner}/${f.repo}/pull/41`,
+            author: "octocat",
+          },
+        ],
+      }),
   );
-  await page.route(`**/api/repositories/${f.repository}/branches`, (route) =>
-    route.fulfill({
-      json: [
-        { name: "main", commit: "a".repeat(40), isDefault: true },
-        { name: "feature/signup", commit: "b".repeat(40), isDefault: false },
-      ],
-    }),
+  await page.route(
+    (url) => url.pathname === `/api/repositories/${f.repository}/branches`,
+    (route) => {
+      const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+      return route.fulfill({
+        json: [
+          { name: "main", commit: "a".repeat(40), isDefault: true },
+          { name: "feature/signup", commit: "b".repeat(40), isDefault: false },
+        ].filter((branch) => branch.name.includes(q)),
+      });
+    },
   );
 }

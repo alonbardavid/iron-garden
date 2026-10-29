@@ -10,16 +10,18 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { Rule } from "@lib/contract";
 import { palette } from "@lib/ds";
 import { initials } from "../../../../components/AppHeader";
 import { Card } from "../../../../components/Card";
+import { ShowMore } from "../../../../components/ShowMore";
 import board from "../../../../components/board.module.css";
 import { errorMessage } from "../../../../logic/api/errors";
 import { orpc } from "../../../../logic/api/orpc";
+import { nextPage, usePagedList } from "../../../../logic/api/paging";
 import { actionSummary, matchSummary } from "../../../../logic/rules";
 import { timeAgo } from "../../../../logic/time";
 import { RuleSwatch } from "../../../pull-requests/diff/rows";
@@ -32,8 +34,11 @@ import { SkeletonRows } from "../../../../components/skeletons";
 export const RulesSettingsScreen = () => {
   const { name } = useRepository();
   const [search, setSearch] = useSearchParams();
-  const { data: rules } = useQuery(
-    orpc.repositories.rules.list.queryOptions({ input: { name } }),
+  const rules = usePagedList(
+    orpc.repositories.rules.list.infiniteOptions({
+      input: (cursor) => ({ name, cursor }),
+      ...nextPage,
+    }),
   );
   const copying = search.has("copy");
   return (
@@ -57,7 +62,7 @@ export const RulesSettingsScreen = () => {
           becomes its own bracket in the review, and its action applies to every
           change it matched.
         </Text>
-        {rules && rules.length === 0 ? (
+        {rules.items?.length === 0 ? (
           <Text size="sm" c="dimmed" py={12}>
             No rules yet. Start with one that auto-accepts generated files or
             lockfiles, or copy rules from another repository.
@@ -79,13 +84,14 @@ export const RulesSettingsScreen = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {rules?.map((rule) => (
+              {rules.items?.map((rule) => (
                 <RuleRow key={rule.id} rule={rule} />
               ))}
             </Table.Tbody>
           </Table>
         )}
-        {!rules && <SkeletonRows rows={3} meta={false} />}
+        {!rules.items && <SkeletonRows rows={3} meta={false} />}
+        <ShowMore list={rules} />
         <Text size="xs" c={palette.muted}>
           Order does not matter. A change matched by several rules keeps every
           action: it can be auto-accepted by one rule and still need a named

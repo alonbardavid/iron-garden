@@ -1,4 +1,15 @@
-import { getDb, apiKeys, and, eq, desc } from "@lib/db-models";
+import {
+  getDb,
+  apiKeys,
+  and,
+  eq,
+  desc,
+  matchesAllTerms,
+  paginate,
+  searchTerms,
+  type ListRequest,
+  type ListResult,
+} from "@lib/db-models";
 import { moduleLogger } from "@lib/logging";
 import { AGENT_KEY_PREFIX, PERSONAL_KEY_PREFIX, getAuth } from "./auth";
 import { parseKeyMetadata, type KeyMetadata } from "./key-metadata";
@@ -63,6 +74,40 @@ export async function createKey(
   };
 }
 
+// A user's personal keys a page at a time, newest first by default; `q` keeps
+// those whose name holds every word of it. The prefix tells them from agent
+// keys in SQL, so pages stay full; the metadata check is the authority.
+export async function listPersonalKeys(
+  userId: string,
+  request: ListRequest<"createdAt"> & { q?: string },
+): Promise<ListResult<KeySummary>> {
+  const page = await paginate(
+    getDb()
+      .select()
+      .from(apiKeys)
+      .where(
+        and(
+          eq(apiKeys.referenceId, userId),
+          eq(apiKeys.prefix, PERSONAL_KEY_PREFIX),
+        ),
+      )
+      .$dynamic(),
+    request,
+    {
+      defaultSort: "createdAt",
+      filters: { q: (q) => matchesAllTerms(apiKeys.name, searchTerms(q)) },
+    },
+  );
+  const owner = { userId, agentId: null };
+  return {
+    ...page,
+    items: page.items
+      .filter((row) => belongsTo(row.metadata, owner))
+      .map(toSummary),
+  };
+}
+
+// Every key of one owner, newest first: an agent has few.
 export async function listKeys(owner: KeyOwner): Promise<KeySummary[]> {
   const rows = await getDb()
     .select()

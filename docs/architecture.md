@@ -9,6 +9,7 @@ the code as it is.
 apps/
   backend/         Hono on Cloudflare Workers: the API, the git proxy, and the SPA's assets
   frontend/        the SPA, admin pages included (served at /)
+  docs/            the operating docs, static Starlight pages (served at /docs/)
 libs/
   contract/        oRPC API contract shared by backend + frontend
   db-models/       Drizzle schema + D1 helpers, prefixed entity ids
@@ -93,9 +94,10 @@ resolves the ref to a commit with `GET /api/repositories/:name/commits?limit=1` 
 path at that commit, so each read caches for good. `GET …/contents` (`readRepositoryPath` in
 `@lib/forge`) answers a path with a directory's entries or a file, reading one tree per path
 segment; a raster image comes back base64-encoded and is shown from a `data:` URL, so no file is
-ever served raw from the app's origin. `GET …/branches` reads git's own ref advertisement
-(`info/refs`), since the Artifacts binding cannot list refs, `GET …/commits` pages a ref's
-first-parent history, `GET …/commits/:hash` lists the files a commit changes against its first
+ever served raw from the app's origin. `GET …/branches?q=` (`searchBranches`) reads git's own
+ref advertisement (`info/refs`), since the Artifacts binding cannot list refs, and answers the
+first five branches matching `q`, the default branch first; `GET …/commits` pages a ref's
+first-parent history (20 commits by default, `offset`/`hasMore`), `GET …/commits/:hash` lists the files a commit changes against its first
 parent (`readCommit`) and `GET …/commits/:hash/file` reads one of them before and after, and `GET …/files` lists every path at a ref for finding a file, reading
 at most 2000 trees and saying when it stopped short. A pull request's changed file comes back
 the same way (`readShownFiles`), so a changed image shows as its two versions.
@@ -332,8 +334,9 @@ repository admin connects it again with their own.
   secret to add by hand. A push is only a hint to sync (run after the answer with
   `waitUntil`), so a replayed delivery changes nothing.
 - **Workflow runs** are stored from `workflow_run` deliveries and refreshed on every full sync
-  (`github_workflow_runs`; a late delivery never rolls a run back). Jobs and artifacts are read
-  live from GitHub, and logs and artifact zips are handed out as GitHub's short-lived download
+  (`github_workflow_runs`; a late delivery never rolls a run back) and listed newest first, 20
+  a page. Jobs and artifacts are read live from GitHub a page at a time (the cursor is GitHub's
+  page number; GitHub's `Link: rel="next"` says whether there is another), and logs and artifact zips are handed out as GitHub's short-lived download
   links. Anyone who can read the repository, agents included, can read all of it.
 
 ### Pull requests and merging

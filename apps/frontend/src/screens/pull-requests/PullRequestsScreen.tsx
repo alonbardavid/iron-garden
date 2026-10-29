@@ -10,11 +10,13 @@ import {
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import type { PullRequestSummary } from "@lib/contract";
+import type { PullRequestCounts, PullRequestSummary } from "@lib/contract";
 import { palette } from "@lib/ds";
 import { Page } from "../../components/Page";
+import { ShowMore } from "../../components/ShowMore";
 import { SkeletonRows } from "../../components/skeletons";
 import { orpc } from "../../logic/api/orpc";
+import { nextPage, usePagedList } from "../../logic/api/paging";
 import { timeAgo } from "../../logic/time";
 import { withQuery } from "../../logic/url";
 import { useRepository } from "../repository/RepositoryLayout";
@@ -24,99 +26,102 @@ import { pullRequestPath } from "./paths";
 import { Bar } from "./ProgressBar";
 import { ImportPullRequestButton } from "./ImportPullRequest";
 
+// The server's status filters; "open" keeps those still processing too.
 const FILTERS = [
-  {
-    key: "open",
-    label: "Open",
-    match: (pr: PullRequestSummary) =>
-      pr.status === "open" || pr.status === "processing",
-  },
-  {
-    key: "processing",
-    label: "Processing",
-    match: (pr: PullRequestSummary) => pr.status === "processing",
-  },
-  {
-    key: "merged",
-    label: "Merged",
-    match: (pr: PullRequestSummary) => pr.status === "merged",
-  },
-  {
-    key: "closed",
-    label: "Closed",
-    match: (pr: PullRequestSummary) => pr.status === "closed",
-  },
-] as const;
+  { key: "open", label: "Open" },
+  { key: "processing", label: "Processing" },
+  { key: "merged", label: "Merged" },
+  { key: "closed", label: "Closed" },
+] as const satisfies readonly {
+  key: keyof PullRequestCounts;
+  label: string;
+}[];
+
+type Filter = (typeof FILTERS)[number];
 
 export const PullRequestsScreen = () => {
   const { name } = useRepository();
-  const { pathname } = useLocation();
   const [search] = useSearchParams();
-  const { data: pullRequests } = useQuery(
-    orpc.pullRequests.list.queryOptions({ input: { name } }),
+  const { data: counts } = useQuery(
+    orpc.pullRequests.counts.queryOptions({ input: { name } }),
   );
-  const all = pullRequests ?? [];
   const current =
     FILTERS.find((f) => f.key === search.get("status")) ?? FILTERS[0];
-  const shown = all.filter(current.match);
   return (
     <Page
       title="Pull requests"
       action={<ImportPullRequestButton name={name} />}
     >
       <Group align="start" gap={20} wrap="nowrap">
-        <Paper withBorder radius="md" p={6} w={240} style={{ flexShrink: 0 }}>
-          <Text size="xs" fw={600} c="dimmed" px={8} pt={10} pb={4}>
-            Status
-          </Text>
-          {FILTERS.map((f) => (
-            <NavLink
-              key={f.key}
-              label={f.label}
-              component={Link}
-              to={withQuery(pathname, {
-                status: f.key === "open" ? null : f.key,
-              })}
-              active={f === current}
-              rightSection={
-                pullRequests && (
-                  <Text size="xs">{all.filter(f.match).length}</Text>
-                )
-              }
-              style={{ borderRadius: 6 }}
-            />
-          ))}
-        </Paper>
+        <StatusFilters current={current} counts={counts} />
         <Paper withBorder radius="md" style={{ flex: 1, overflow: "hidden" }}>
-          <PullRequestsBody loaded={pullRequests !== undefined} shown={shown} />
+          <PullRequestList name={name} status={current.key} />
         </Paper>
       </Group>
     </Page>
   );
 };
 
-// The list of what the filter shows, or why it shows nothing.
-const PullRequestsBody = ({
-  loaded,
-  shown,
+const StatusFilters = ({
+  current,
+  counts,
 }: {
-  loaded: boolean;
-  shown: PullRequestSummary[];
+  current: Filter;
+  counts: PullRequestCounts | undefined;
 }) => {
-  if (!loaded) {
+  const { pathname } = useLocation();
+  return (
+    <Paper withBorder radius="md" p={6} w={240} style={{ flexShrink: 0 }}>
+      <Text size="xs" fw={600} c="dimmed" px={8} pt={10} pb={4}>
+        Status
+      </Text>
+      {FILTERS.map((f) => (
+        <NavLink
+          key={f.key}
+          label={f.label}
+          component={Link}
+          to={withQuery(pathname, {
+            status: f.key === "open" ? null : f.key,
+          })}
+          active={f === current}
+          rightSection={<Text size="xs">{counts?.[f.key]}</Text>}
+          style={{ borderRadius: 6 }}
+        />
+      ))}
+    </Paper>
+  );
+};
+
+// The pull requests one status filter keeps, newest first, a page at a time.
+const PullRequestList = ({
+  name,
+  status,
+}: {
+  name: string;
+  status: Filter["key"];
+}) => {
+  const list = usePagedList(
+    orpc.pullRequests.list.infiniteOptions({
+      input: (cursor) => ({ name, status, cursor }),
+      ...nextPage,
+    }),
+  );
+  if (!list.items) {
     return <SkeletonRows rows={4} />;
   }
-  if (shown.length === 0) {
-    return (
-      <Stack align="center" py={48} gap={4}>
-        <Text fw={600}>Nothing here</Text>
-        <Text size="sm" c="dimmed">
-          Agents open pull requests from their sessions.
-        </Text>
-      </Stack>
-    );
-  }
-  return <PullRequestTable pullRequests={shown} />;
+  return list.items.length === 0 ? (
+    <Stack align="center" py={48} gap={4}>
+      <Text fw={600}>Nothing here</Text>
+      <Text size="sm" c="dimmed">
+        Agents open pull requests from their sessions.
+      </Text>
+    </Stack>
+  ) : (
+    <>
+      <PullRequestTable pullRequests={list.items} />
+      <ShowMore list={list} />
+    </>
+  );
 };
 
 const PullRequestTable = ({

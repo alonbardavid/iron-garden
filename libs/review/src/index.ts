@@ -3,7 +3,10 @@ export {
   refreshPullRequest,
   submitGroups,
   listPullRequests,
+  countPullRequests,
   getPullRequest,
+  type PullRequestListRequest,
+  type PullRequestCounts,
   type PullRequestLinks,
   type PullRequestSummary,
   type PullRequestDetail,
@@ -86,6 +89,7 @@ export {
 } from "./groups";
 export {
   listRules,
+  listCopyableRules,
   getRule,
   createRule,
   updateRule,
@@ -93,7 +97,9 @@ export {
   deleteRule,
   copyRules,
   type Rule,
+  type CopyableRule,
   type RuleInput,
+  type RuleListRequest,
 } from "./rules/rules";
 export {
   getProcessingPrompt,

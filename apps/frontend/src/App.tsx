@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useMatch } from "react-router-dom";
+import { DOCS_PATH } from "@lib/contract/constants";
 import { LoadingLayout } from "./components/layouts/LoadingLayout";
 import { UnauthenticatedLayout } from "./components/layouts/UnauthenticatedLayout";
 import { orpc } from "./logic/api/orpc";
@@ -11,6 +12,7 @@ import { AgentScreen } from "./screens/account/AgentScreen";
 import { AgentsScreen } from "./screens/account/AgentsScreen";
 import { ApiKeysScreen } from "./screens/account/ApiKeysScreen";
 import { GithubTokensScreen } from "./screens/account/GithubTokensScreen";
+import { DocsNotFoundScreen } from "./screens/docs-not-found/DocsNotFoundScreen";
 import { EmailScreen } from "./screens/admin/EmailScreen";
 import { AgentConfigScreen } from "./screens/admin/agent-config/AgentConfigScreen";
 import { UsersScreen } from "./screens/admin/UsersScreen";
@@ -43,11 +45,15 @@ import {
 } from "./screens/setup/SetupScreen";
 
 export const App = () => {
+  const missingDocsPage = useMatch(`${DOCS_PATH}*`);
   const { me, isLoading } = useMe();
   const { capabilities, isLoading: capabilitiesLoading } = useCapabilities();
   const { data: setup } = useQuery(
     orpc.setup.state.queryOptions({ enabled: !isLoading && !me }),
   );
+  if (missingDocsPage) {
+    return <DocsNotFoundScreen />;
+  }
   if (isLoading || capabilitiesLoading || (!me && !setup)) {
     return <LoadingLayout />;
   }

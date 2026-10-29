@@ -7,12 +7,19 @@ import {
   pullRequests,
   githubConnections,
   newEntityId,
+  paginate,
+  matchesAllTerms,
+  searchTerms,
   and,
   eq,
   asc,
   count,
   inArray,
+  isNotNull,
   type AccessLevel,
+  type ListRequest,
+  type ListResult,
+  type SQL,
 } from "@lib/db-models";
 import { getBindings } from "@lib/capabilities";
 import { getGitHost, GitHostError } from "@lib/git-host";
@@ -117,20 +124,100 @@ export async function levelOn(
   );
 }
 
+// The repositories the principal can read, a page at a time, by name. `q`
+// keeps those whose name holds every word of it.
 export async function listRepositories(
   principal: Principal,
-): Promise<AccessibleRepository[]> {
-  const rows = await getDb()
-    .select()
-    .from(repositories)
-    .orderBy(asc(repositories.name));
-  const levels = await Promise.all(
-    rows.map((row) => levelOn(principal, row.id)),
-  );
-  return rows.flatMap((row, i) => {
-    const level = levels[i];
-    return level ? [{ ...toRepository(row), level }] : [];
+  request: ListRequest<"name" | "createdAt" | "updatedAt"> & { q?: string },
+): Promise<ListResult<AccessibleRepository>> {
+  const page = await paginate(readableBy(principal), request, {
+    defaultSort: "name",
+    filters: { q: (q) => matchesAllTerms(repositories.name, searchTerms(q)) },
   });
+  return {
+    ...page,
+    items: page.items.map((row) => accessible(principal, row)),
+  };
+}
+
+// Up to `limit` readable repositories whose name holds every word of `q`.
+export async function searchRepositories(
+  principal: Principal,
+  q: string,
+  limit: number,
+): Promise<AccessibleRepository[]> {
+  const select = readableBy(principal);
+  const rows = await select
+    .where(
+      and(
+        select._.config.where,
+        matchesAllTerms(repositories.name, searchTerms(q)),
+      ),
+    )
+    .orderBy(asc(repositories.name))
+    .limit(limit);
+  return rows.map((row) => accessible(principal, row));
+}
+
+// Every repository with the principal's member level and, for an agent, its
+// grant, keeping only those the principal reaches at all.
+function readableBy(principal: Principal) {
+  return getDb()
+    .select({
+      id: repositories.id,
+      name: repositories.name,
+      description: repositories.description,
+      defaultBranch: repositories.defaultBranch,
+      artifactsName: repositories.artifactsName,
+      createdAt: repositories.createdAt,
+      updatedAt: repositories.updatedAt,
+      memberLevel: repositoryMembers.level,
+      grantLevel: agentRepositoryAccess.level,
+    })
+    .from(repositories)
+    .leftJoin(
+      repositoryMembers,
+      and(
+        eq(repositoryMembers.repositoryId, repositories.id),
+        eq(repositoryMembers.userId, principal.userId),
+      ),
+    )
+    .leftJoin(
+      agentRepositoryAccess,
+      and(
+        eq(agentRepositoryAccess.repositoryId, repositories.id),
+        eq(
+          agentRepositoryAccess.agentId,
+          principal.kind === "agent" ? principal.agentId : "",
+        ),
+      ),
+    )
+    .where(reachable(principal))
+    .$dynamic();
+}
+
+// Mirrors effectiveLevel: an admin reaches everything, an agent only what it
+// was granted and, below an admin owner, what its owner is a member of.
+function reachable(principal: Principal): SQL | undefined {
+  const member = isNotNull(repositoryMembers.level);
+  const owner = principal.role === "admin" ? undefined : member;
+  return principal.kind === "agent"
+    ? and(isNotNull(agentRepositoryAccess.level), owner)
+    : owner;
+}
+
+function accessible(
+  principal: Principal,
+  row: Omit<RepositoryRow, "createdBy"> & {
+    memberLevel: AccessLevel | null;
+    grantLevel: AccessLevel | null;
+  },
+): AccessibleRepository {
+  const { memberLevel, grantLevel, ...repository } = row;
+  return {
+    ...toRepository(repository),
+    level: effectiveLevel(principal, memberLevel, grantLevel)!,
+  };
 }
 
 // What the repository list shows of each repository beyond its own fields.
@@ -141,11 +228,18 @@ export interface RepositoryStats {
   github: { owner: string; repo: string } | null;
 }
 
-// The repositories the principal can read, each with its stats.
+// A page of the repositories the principal can read, each with its stats.
 export async function listRepositoriesWithStats(
   principal: Principal,
+  request: Parameters<typeof listRepositories>[1],
+): Promise<ListResult<AccessibleRepository & { stats: RepositoryStats }>> {
+  const page = await listRepositories(principal, request);
+  return { ...page, items: await withStats(page.items) };
+}
+
+async function withStats(
+  list: AccessibleRepository[],
 ): Promise<(AccessibleRepository & { stats: RepositoryStats })[]> {
-  const list = await listRepositories(principal);
   const ids = list.map((repo) => repo.id);
   if (ids.length === 0) {
     return [];
@@ -336,7 +430,7 @@ export function requireGit(): void {
   }
 }
 
-function toRepository(row: RepositoryRow): Repository {
+function toRepository(row: Omit<RepositoryRow, "createdBy">): Repository {
   return {
     id: row.id,
     name: row.name,

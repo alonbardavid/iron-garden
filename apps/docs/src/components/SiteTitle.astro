@@ -1,0 +1,80 @@
+---
+// The app's wordmark (apps/frontend/src/components/Logo.tsx) in place of
+// Starlight's logo and title: the seedling-and-nut mark, then the product's
+// name with the metal in ink and the garden in leaf, in each theme's colors.
+import { PRODUCT_DISPLAY_NAME } from "@lib/contract/constants";
+import { schemes } from "@lib/ds/palette";
+
+const { siteTitleHref } = Astro.locals.starlightRoute;
+const [metal, garden] = splitName(PRODUCT_DISPLAY_NAME);
+const LEAF = "M0 0C0-5.5 3.5-9 9-9 9-3.5 5.5 0 0 0z";
+
+// Starlight's dark theme is the default :root, its light theme
+// [data-theme="light"].
+const colors = (scheme: (typeof schemes)["light"]) =>
+  `--brand-from:${scheme.brandFrom};--brand-to:${scheme.brandTo};` +
+  `--brand-leaf:${scheme.added};--brand-ink:${scheme.ink};`;
+const themeColors =
+  `:root{${colors(schemes.dark)}}` +
+  `:root[data-theme="light"]{${colors(schemes.light)}}`;
+
+// "IronGarden" splits at its second capital; a one-word name stays whole.
+function splitName(name: string): [string, string] {
+  const at = name.slice(1).search(/[A-Z]/);
+  return at === -1 ? [name, ""] : [name.slice(0, at + 1), name.slice(at + 1)];
+}
+---
+
+<style is:inline set:html={themeColors} />
+<a href={siteTitleHref} class="site-title">
+  <svg viewBox="0 2 32 36" aria-hidden="true">
+    <defs>
+      <linearGradient id="brand-steel" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="var(--brand-from)"></stop>
+        <stop offset="1" stop-color="var(--brand-to)"></stop>
+      </linearGradient>
+    </defs>
+    <path
+      d="M16 10.5 24.5 15.4v9.8L16 30.1 7.5 25.2v-9.8z"
+      fill="url(#brand-steel)"></path>
+    <circle cx="16" cy="20" r="3.4" fill="var(--sl-color-bg-nav)"></circle>
+    <path
+      d="M16 20V9"
+      stroke="var(--brand-leaf)"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      fill="none"></path>
+    <path
+      d={LEAF}
+      fill="var(--brand-leaf)"
+      transform="translate(16 9.6) rotate(25) scale(0.7)"></path>
+    <path
+      d={LEAF}
+      fill="var(--brand-leaf)"
+      transform="translate(16 12.2) rotate(-115) scale(0.62)"></path>
+  </svg>
+  <span translate="no">{metal}<span class="garden">{garden}</span></span>
+</a>
+
+<style>
+  .site-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    font-size: var(--sl-text-h4);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--brand-ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  svg {
+    flex: none;
+    height: calc(var(--sl-nav-height) - 2 * var(--sl-nav-pad-y));
+    width: auto;
+  }
+  .garden {
+    color: var(--brand-leaf);
+  }
+</style>

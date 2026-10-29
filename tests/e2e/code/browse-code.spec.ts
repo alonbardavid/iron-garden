@@ -160,20 +160,24 @@ async function serveRepository(page: Page) {
     const body = await response.json();
     await route.fulfill({ response, json: { ...body, head: MAIN } });
   });
-  await page.route(`**${api}/branches`, (route) =>
-    route.fulfill({
-      json: [
-        { name: "main", commit: MAIN, isDefault: true },
-        { name: "dev", commit: DEV, isDefault: false },
-      ],
-    }),
+  await page.route(
+    (url) => url.pathname === `${api}/branches`,
+    (route) => {
+      const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+      return route.fulfill({
+        json: [
+          { name: "main", commit: MAIN, isDefault: true },
+          { name: "dev", commit: DEV, isDefault: false },
+        ].filter((branch) => branch.name.includes(q)),
+      });
+    },
   );
   await page.route(
     (url) => url.pathname === `${api}/commits`,
     (route) => {
       const url = new URL(route.request().url());
       const offset = Number(url.searchParams.get("offset") ?? 0);
-      const limit = Number(url.searchParams.get("limit") ?? 30);
+      const limit = Number(url.searchParams.get("limit") ?? 20);
       const history = historyOf(url.searchParams.get("ref") ?? "main");
       return route.fulfill({
         json: {

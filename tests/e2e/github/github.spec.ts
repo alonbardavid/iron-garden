@@ -8,6 +8,17 @@ const f = GITHUB_FIXTURE;
 const HOOK = `${API}/api/github/webhooks/${f.connectionId}`;
 const repository = { full_name: `${f.owner}/${f.repo}` };
 
+interface RunPage {
+  items: { runId: number; conclusion: string }[];
+  nextCursor: string | null;
+  total: null;
+}
+
+interface TokenPage {
+  items: { id: string; name: string }[];
+  nextCursor: string | null;
+}
+
 // First in the file: the deliveries below mark the webhook as working.
 test.describe("GitHub settings before any delivery", () => {
   test("an admin sets the webhook up by hand from settings", async ({
@@ -99,12 +110,14 @@ test.describe("GitHub", () => {
     expect((await deliver(request, "workflow_run", late)).status()).toBe(200);
 
     await signInApi(request, TEST_USER);
-    const runs = await json<{ runId: number; conclusion: string }[]>(
+    const runs = await json<RunPage>(
       await request.get(`${API}/api/repositories/${f.repository}/github/runs`),
     );
-    expect(runs).toEqual([
-      expect.objectContaining({ runId: 4242, conclusion: "failure" }),
-    ]);
+    expect(runs).toEqual({
+      items: [expect.objectContaining({ runId: 4242, conclusion: "failure" })],
+      nextCursor: null,
+      total: null,
+    });
 
     await signInPage(page, TEST_USER.username, TEST_USER.password);
     await page.goto(`/r/${f.repository}`);
@@ -112,6 +125,55 @@ test.describe("GitHub", () => {
     const list = page.getByRole("list", { name: "Workflow runs" });
     await expect(list.getByText("CI #7")).toBeVisible();
     await expect(list.getByText("Failed")).toBeVisible();
+  });
+
+  test("workflow runs come newest first, 20 a page", async ({
+    page,
+    request,
+  }) => {
+    // Runs 5000…5024 on their own branch, a minute apart.
+    for (let i = 0; i < 25; i++) {
+      const delivered = await deliver(
+        request,
+        "workflow_run",
+        workflowRun({
+          id: 5000 + i,
+          branch: "paging",
+          sha: "5".repeat(40),
+          startedAt: new Date(Date.UTC(2026, 9, 2, 10, i)).toISOString(),
+          status: "completed",
+          conclusion: "success",
+          updatedAt: "2026-10-03T00:00:00Z",
+        }),
+      );
+      expect(delivered.status()).toBe(200);
+    }
+
+    await signInApi(request, TEST_USER);
+    const runs = `${API}/api/repositories/${f.repository}/github/runs?branch=paging`;
+    const first = await json<RunPage>(await request.get(runs));
+    expect(first.items.map((run) => run.runId)).toEqual(
+      Array.from({ length: 20 }, (_, i) => 5024 - i),
+    );
+    expect(first.nextCursor).not.toBeNull();
+    const second = await json<RunPage>(
+      await request.get(`${runs}&cursor=${first.nextCursor}`),
+    );
+    expect(second.items.map((run) => run.runId)).toEqual([
+      5004, 5003, 5002, 5001, 5000,
+    ]);
+    expect(second.nextCursor).toBeNull();
+
+    // With 4242 from the delivery before, the tab shows 20 and then the rest.
+    await signInPage(page, TEST_USER.username, TEST_USER.password);
+    await page.goto(`/r/${f.repository}/workflows`);
+    const list = page.getByRole("list", { name: "Workflow runs" });
+    await expect(list.getByRole("listitem")).toHaveCount(20);
+    await page.getByRole("button", { name: "Show more" }).click();
+    await expect(list.getByRole("listitem")).toHaveCount(26);
+    await expect(page.getByRole("button", { name: "Show more" })).toHaveCount(
+      0,
+    );
   });
 
   test("a push syncs its branch from GitHub", async ({ request }) => {
@@ -142,14 +204,48 @@ test.describe("GitHub", () => {
     request,
   }) => {
     await signInApi(request, TEST_ADMIN);
-    const [token] = await json<{ id: string }[]>(
+    const {
+      items: [token],
+    } = await json<TokenPage>(
       await request.get(`${API}/api/account/github-tokens`),
     );
     await signInApi(request, TEST_USER);
     const res = await request.get(
-      `${API}/api/account/github-tokens/${token!.id}/repositories`,
+      `${API}/api/account/github-tokens/${token!.id}/repositories?q=web`,
     );
     expect(res.status()).toBe(404);
+  });
+
+  test("tokens page newest first, and their autocomplete offers five", async ({
+    request,
+  }) => {
+    await signInApi(request, TEST_ADMIN);
+    const tokens = `${API}/api/account/github-tokens`;
+    const all = await json<TokenPage>(await request.get(tokens));
+    expect(all.items).toHaveLength(1 + f.spareTokens);
+    expect(all.items[0]!.name).toBe(f.tokenName);
+    expect(all.nextCursor).toBeNull();
+
+    const first = await json<TokenPage>(await request.get(`${tokens}?limit=4`));
+    expect(first.items).toHaveLength(4);
+    const rest = await json<TokenPage>(
+      await request.get(`${tokens}?limit=4&cursor=${first.nextCursor}`),
+    );
+    expect(rest.nextCursor).toBeNull();
+    expect([...first.items, ...rest.items].map((t) => t.id)).toEqual(
+      all.items.map((t) => t.id),
+    );
+
+    const search = `${API}/api/search/github-tokens`;
+    expect(await json<unknown[]>(await request.get(search))).toHaveLength(5);
+    expect(
+      await json<unknown[]>(await request.get(`${search}?q=spare`)),
+    ).toHaveLength(5);
+    expect(
+      (
+        await json<{ name: string }[]>(await request.get(`${search}?q=acme`))
+      ).map((t) => t.name),
+    ).toEqual([f.tokenName]);
   });
 
   test("only a repository admin may read the webhook secret", async ({
@@ -175,6 +271,9 @@ test.describe("GitHub", () => {
     await signInApi(request, TEST_USER);
     expect(
       await json(await request.get(`${API}/api/account/github-tokens`)),
+    ).toEqual({ items: [], nextCursor: null, total: null });
+    expect(
+      await json(await request.get(`${API}/api/search/github-tokens`)),
     ).toEqual([]);
   });
 });
@@ -197,7 +296,17 @@ function deliver(
   });
 }
 
-function workflowRun(update: {
+function workflowRun({
+  id = 4242,
+  branch = "main",
+  sha = "c".repeat(40),
+  startedAt = "2026-10-01T10:00:00Z",
+  ...update
+}: {
+  id?: number;
+  branch?: string;
+  sha?: string;
+  startedAt?: string;
   status: string;
   conclusion: string | null;
   updatedAt: string;
@@ -206,18 +315,18 @@ function workflowRun(update: {
     action: update.status === "completed" ? "completed" : "in_progress",
     repository,
     workflow_run: {
-      id: 4242,
+      id,
       name: "CI",
-      run_number: 7,
+      run_number: id === 4242 ? 7 : id,
       run_attempt: 1,
       event: "push",
-      head_branch: "main",
-      head_sha: "c".repeat(40),
+      head_branch: branch,
+      head_sha: sha,
       status: update.status,
       conclusion: update.conclusion,
-      html_url: `https://github.com/${f.owner}/${f.repo}/actions/runs/4242`,
-      run_started_at: "2026-10-01T10:00:00Z",
-      created_at: "2026-10-01T10:00:00Z",
+      html_url: `https://github.com/${f.owner}/${f.repo}/actions/runs/${id}`,
+      run_started_at: startedAt,
+      created_at: startedAt,
       updated_at: update.updatedAt,
     },
   };

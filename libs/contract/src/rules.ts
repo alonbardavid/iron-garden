@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import { listPageSchema, listQuerySchema } from "./listing";
 
 // Mirrors RULE_ACTIONS and RULE_CONSTRUCTS in @lib/db-models.
 export const RULE_ACTIONS = [
@@ -89,14 +90,32 @@ export const ruleSchema = z.object({
 });
 export type Rule = z.infer<typeof ruleSchema>;
 
+// A rule of another repository, and whether this one already has a rule of
+// the same name that matches the same way.
+export const copyableRuleSchema = ruleSchema.extend({ already: z.boolean() });
+export type CopyableRule = z.infer<typeof copyableRuleSchema>;
+
 const byRepository = z.object({ name: z.string() });
 const byRule = byRepository.extend({ id: z.string() });
+
+// Oldest first; `q` keeps the rules whose name holds every word of it.
+const ruleListQuerySchema = listQuerySchema(ruleSchema, {
+  sorts: ["createdAt", "name"],
+  filters: {},
+});
 
 export const rulesContract = {
   list: oc
     .route({ method: "GET", path: "/api/repositories/{name}/rules" })
-    .input(byRepository)
-    .output(z.array(ruleSchema)),
+    .input(ruleListQuerySchema.extend(byRepository.shape))
+    .output(listPageSchema(ruleSchema)),
+  // The rules of `from` to copy here, each saying whether it is already here.
+  copyable: oc
+    .route({ method: "GET", path: "/api/repositories/{name}/rules/copyable" })
+    .input(
+      ruleListQuerySchema.extend({ ...byRepository.shape, from: z.string() }),
+    )
+    .output(listPageSchema(copyableRuleSchema)),
   get: oc
     .route({ method: "GET", path: "/api/repositories/{name}/rules/{id}" })
     .input(byRule)

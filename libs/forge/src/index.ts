@@ -12,6 +12,7 @@ export {
   levelOn,
   listRepositories,
   listRepositoriesWithStats,
+  searchRepositories,
   getRepository,
   createRepository,
   updateRepository,
@@ -25,17 +26,20 @@ export {
 } from "./repositories";
 export {
   listMembers,
+  listAgentGrants,
+  searchMembers,
   setMember,
   removeMember,
   setAgentAccess,
   listAgentAccess,
   type Member,
   type AgentGrant,
+  type PageRequest,
 } from "./members";
 export { serveGit } from "./git-proxy";
 export { listRepositoryFiles, readRepositoryPath } from "./contents";
 export {
-  listBranches,
+  searchBranches,
   listCommits,
   readCommit,
   readCommitFile,

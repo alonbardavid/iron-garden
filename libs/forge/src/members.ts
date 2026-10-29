@@ -4,14 +4,19 @@ import {
   agentRepositoryAccess,
   agents,
   repositories,
+  user,
+  paginate,
   and,
   asc,
   eq,
+  inArray,
   type AccessLevel,
+  type ListResult,
 } from "@lib/db-models";
 import {
   getUserProfile,
   getUserProfiles,
+  userMatches,
   type Agent,
   type Principal,
   type UserProfile,
@@ -28,6 +33,12 @@ export interface Member {
   level: AccessLevel;
 }
 
+// Where a page starts and how long it is.
+export interface PageRequest {
+  limit: number;
+  cursor?: string;
+}
+
 export interface AgentGrant {
   agentId: string;
   agentName: string;
@@ -36,44 +47,91 @@ export interface AgentGrant {
   effective: AccessLevel | null;
 }
 
+// A repository's members a page at a time, by name.
 export async function listMembers(
   principal: Principal,
   name: string,
-): Promise<{ members: Member[]; agents: AgentGrant[] }> {
+  page: PageRequest,
+): Promise<ListResult<Member>> {
   const repository = await authorize(principal, name, "read");
-  const db = getDb();
-  const [memberRows, grantRows] = await Promise.all([
-    db
-      .select()
-      .from(repositoryMembers)
-      .where(eq(repositoryMembers.repositoryId, repository.id)),
-    db
+  const rows = await paginate(
+    membersOf(repository.id),
+    { ...page, sort: "name", dir: "asc", withTotal: false },
+    {},
+  );
+  return { ...rows, items: await withProfiles(rows.items) };
+}
+
+// Up to `limit` members whose name, username or email holds every word of
+// `q`, by name.
+export async function searchMembers(
+  principal: Principal,
+  name: string,
+  q: string,
+  limit: number,
+): Promise<Member[]> {
+  const repository = await authorize(principal, name, "read");
+  const select = membersOf(repository.id);
+  const rows = await select
+    .where(and(select._.config.where, userMatches(q)))
+    .orderBy(asc(user.name), asc(user.id))
+    .limit(limit);
+  return withProfiles(rows);
+}
+
+// The agents granted access to a repository a page at a time, by name, with
+// what each can actually do through its owner.
+export async function listAgentGrants(
+  principal: Principal,
+  name: string,
+  page: PageRequest,
+): Promise<ListResult<AgentGrant>> {
+  const repository = await authorize(principal, name, "read");
+  const rows = await paginate(
+    getDb()
       .select({
-        agentId: agents.id,
-        agentName: agents.name,
+        id: agents.id,
+        name: agents.name,
         ownerUserId: agents.ownerUserId,
         granted: agentRepositoryAccess.level,
       })
       .from(agentRepositoryAccess)
       .innerJoin(agents, eq(agents.id, agentRepositoryAccess.agentId))
-      .where(eq(agentRepositoryAccess.repositoryId, repository.id)),
+      .where(eq(agentRepositoryAccess.repositoryId, repository.id))
+      .$dynamic(),
+    { ...page, sort: "name", dir: "asc", withTotal: false },
+    {},
+  );
+  const owners = [...new Set(rows.items.map((g) => g.ownerUserId))];
+  const [profiles, ownerRows] = await Promise.all([
+    getUserProfiles(owners),
+    owners.length === 0
+      ? []
+      : getDb()
+          .select({
+            userId: repositoryMembers.userId,
+            level: repositoryMembers.level,
+          })
+          .from(repositoryMembers)
+          .where(
+            and(
+              eq(repositoryMembers.repositoryId, repository.id),
+              inArray(repositoryMembers.userId, owners),
+            ),
+          ),
   ]);
-  const profiles = await getUserProfiles([
-    ...memberRows.map((m) => m.userId),
-    ...grantRows.map((g) => g.ownerUserId),
-  ]);
-  const memberLevel = new Map(memberRows.map((m) => [m.userId, m.level]));
+  const memberLevel = new Map(ownerRows.map((m) => [m.userId, m.level]));
   return {
-    members: memberRows.flatMap((m) => {
-      const user = profiles.get(m.userId);
-      return user ? [{ user, level: m.level }] : [];
-    }),
-    agents: grantRows.map((g) => ({
-      ...g,
+    ...rows,
+    items: rows.items.map(({ id, name: agentName, ownerUserId, granted }) => ({
+      agentId: id,
+      agentName,
+      ownerUserId,
+      granted,
       effective: effectiveLevel(
-        { kind: "agent", role: profiles.get(g.ownerUserId)?.role ?? "user" },
-        memberLevel.get(g.ownerUserId) ?? null,
-        g.granted,
+        { kind: "agent", role: profiles.get(ownerUserId)?.role ?? "user" },
+        memberLevel.get(ownerUserId) ?? null,
+        granted,
       ),
     })),
   };
@@ -210,4 +268,28 @@ async function assertNotLastRepositoryAdmin(
       "This is the repository's last admin; make someone else an admin first",
     );
   }
+}
+
+// A repository's members with the user's name to order them by.
+function membersOf(repositoryId: string) {
+  return getDb()
+    .select({
+      id: user.id,
+      name: user.name,
+      level: repositoryMembers.level,
+    })
+    .from(repositoryMembers)
+    .innerJoin(user, eq(user.id, repositoryMembers.userId))
+    .where(eq(repositoryMembers.repositoryId, repositoryId))
+    .$dynamic();
+}
+
+async function withProfiles(
+  rows: { id: string; level: AccessLevel }[],
+): Promise<Member[]> {
+  const profiles = await getUserProfiles(rows.map((row) => row.id));
+  return rows.flatMap((row) => {
+    const profile = profiles.get(row.id);
+    return profile ? [{ user: profile, level: row.level }] : [];
+  });
 }

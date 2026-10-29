@@ -14,20 +14,25 @@ import {
   githubWebhookAccess,
   jobLogsUrl,
   listGithubTokens,
-  listTokenRepositories,
   listWorkflowArtifacts,
   listWorkflowJobs,
   listWorkflowRuns,
-  listGithubWorkflows,
+  searchGithubTokens,
+  searchGithubWorkflows,
+  searchTokenRepositories,
   syncGithub,
 } from "@lib/github";
+import { AUTOCOMPLETE_LIMIT } from "@lib/contract";
 import { api } from "./api";
 
 const ok = { ok: true as const };
 
 export const githubTokens = api.githubTokens.router({
-  list: api.githubTokens.list.handler(({ context: { principal } }) =>
-    listGithubTokens(principal),
+  list: api.githubTokens.list.handler(({ context: { principal }, input }) =>
+    listGithubTokens(principal, input),
+  ),
+  search: api.githubTokens.search.handler(({ context: { principal }, input }) =>
+    searchGithubTokens(principal, input.q, AUTOCOMPLETE_LIMIT),
   ),
   create: api.githubTokens.create.handler(({ context: { principal }, input }) =>
     addGithubToken(principal, input),
@@ -40,7 +45,7 @@ export const githubTokens = api.githubTokens.router({
   ),
   repositories: api.githubTokens.repositories.handler(
     ({ context: { principal }, input }) =>
-      listTokenRepositories(principal, input.id),
+      searchTokenRepositories(principal, input.id, input.q, AUTOCOMPLETE_LIMIT),
   ),
 });
 
@@ -81,16 +86,16 @@ export const repositoryGithub = {
       syncGithub(principal, input.name, origin),
   ),
   runs: api.repositories.github.runs.handler(
-    ({ context: { principal }, input: { name, ...filter } }) =>
-      listWorkflowRuns(principal, name, filter),
+    ({ context: { principal }, input: { name, ...request } }) =>
+      listWorkflowRuns(principal, name, request),
   ),
   jobs: api.repositories.github.jobs.handler(
-    ({ context: { principal }, input }) =>
-      listWorkflowJobs(principal, input.name, input.runId),
+    ({ context: { principal }, input: { name, runId, ...page } }) =>
+      listWorkflowJobs(principal, name, runId, page),
   ),
   artifacts: api.repositories.github.artifacts.handler(
-    ({ context: { principal }, input }) =>
-      listWorkflowArtifacts(principal, input.name, input.runId),
+    ({ context: { principal }, input: { name, runId, ...page } }) =>
+      listWorkflowArtifacts(principal, name, runId, page),
   ),
   artifactDownload: api.repositories.github.artifactDownload.handler(
     async ({ context: { principal }, input }) => ({
@@ -99,7 +104,7 @@ export const repositoryGithub = {
   ),
   workflows: api.repositories.github.workflows.handler(
     ({ context: { principal }, input }) =>
-      listGithubWorkflows(principal, input.name),
+      searchGithubWorkflows(principal, input.name, input.q, AUTOCOMPLETE_LIMIT),
   ),
   jobLogs: api.repositories.github.jobLogs.handler(
     async ({ context: { principal }, input }) => ({
@@ -116,7 +121,7 @@ export const pullRequestsFromGithub = api.pullRequests.fromGithub.router({
   ),
   pulls: api.pullRequests.fromGithub.pulls.handler(
     ({ context: { principal }, input }) =>
-      githubPullOptions(principal, input.name),
+      githubPullOptions(principal, input.name, input.q, AUTOCOMPLETE_LIMIT),
   ),
   open: api.pullRequests.fromGithub.open.handler(
     ({ context: { principal }, input }) =>
