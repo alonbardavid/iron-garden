@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import { listPageSchema, listQuerySchema } from "./listing";
 import { nameSchema } from "./names";
 import { createdKeySchema, createKeyInputSchema, keySchema } from "./account";
 import { ACCESS_LEVELS } from "./repositories";
@@ -28,9 +29,17 @@ const byName = z.object({ name: z.string() });
 const ok = z.object({ ok: z.literal(true) });
 
 export const agentsContract = {
+  // The caller's agents, by name; `q` keeps those whose name holds every
+  // word of it.
   list: oc
     .route({ method: "GET", path: "/api/agents" })
-    .output(z.array(agentSchema)),
+    .input(
+      listQuerySchema(agentSchema, {
+        sorts: ["name", "createdAt"],
+        filters: {},
+      }),
+    )
+    .output(listPageSchema(agentSchema)),
   create: oc
     .route({ method: "POST", path: "/api/agents" })
     .input(

@@ -18,6 +18,7 @@ import {
   getPullRequestReference,
   getReview,
   acceptChanges,
+  countPullRequests,
   listPullRequests,
   refreshPullRequest,
   submitGroups,
@@ -137,8 +138,12 @@ export const pullRequests = api.pullRequests.router({
   activity,
   comments,
   chat,
-  list: api.pullRequests.list.handler(({ context: { principal }, input }) =>
-    listPullRequests(principal, input.name),
+  list: api.pullRequests.list.handler(
+    ({ context: { principal }, input: { name, ...request } }) =>
+      listPullRequests(principal, name, request),
+  ),
+  counts: api.pullRequests.counts.handler(({ context: { principal }, input }) =>
+    countPullRequests(principal, input.name),
   ),
   get: api.pullRequests.get.handler(({ context: { principal }, input }) =>
     getPullRequest(principal, input.name, input.number),

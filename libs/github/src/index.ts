@@ -3,7 +3,8 @@ export {
   listGithubTokens,
   addGithubToken,
   deleteGithubToken,
-  listTokenRepositories,
+  searchTokenRepositories,
+  searchGithubTokens,
   type GithubTokenSummary,
   type TokenRepository,
 } from "./tokens";
@@ -25,6 +26,7 @@ export {
   listWorkflowRuns,
   listWorkflowJobs,
   listWorkflowArtifacts,
+  type GithubPageRequest,
   artifactDownloadUrl,
   jobLogsUrl,
   type WorkflowRun,
@@ -48,7 +50,7 @@ export {
   type OpenFromGithubSource,
 } from "./from-github";
 export {
-  listGithubWorkflows,
+  searchGithubWorkflows,
   copyRulesHere,
   type GithubWorkflow,
 } from "./workflows";

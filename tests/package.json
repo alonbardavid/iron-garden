@@ -6,7 +6,8 @@
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "clean": "rm -rf playwright-report test-results"
+    "clean": "rm -rf playwright-report test-results",
+    "docs:screenshots": "playwright test --config docs-screenshots.config.ts"
   },
   "devDependencies": {
     "@lib/db-models": "workspace:*",

@@ -1,0 +1,79 @@
+/* The app's look (libs/ds/src/palette.ts): IBM Plex and the garden green.
+   Starlight reads these custom properties; its dark theme is the default
+   :root, its light theme [data-theme="light"]. */
+:root {
+  --sl-font: "IBM Plex Sans", system-ui, sans-serif;
+  --sl-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --sl-color-accent-low: #1b2a17;
+  --sl-color-accent: #7bb35f;
+  --sl-color-accent-high: #9dcb88;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #dcebd3;
+  --sl-color-accent: #3d8438;
+  --sl-color-accent-high: #2f6b2a;
+}
+
+/* Screenshots of the app sit on its own light or dark page; a frame keeps
+   their edges visible on either theme. */
+.sl-markdown-content img {
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 8px;
+}
+
+/* Starlight lets list items break words anywhere, which inside a table in a
+   list splits "Username" mid-word. A table breaks only words too long to fit. */
+.sl-markdown-content table {
+  overflow-wrap: break-word;
+}
+/* A long path in a cell may still break anywhere, or it widens the table
+   past a phone's screen. */
+.sl-markdown-content td code {
+  overflow-wrap: anywhere;
+}
+
+/* A table whose first column holds short labels (marked by
+   rehype-plugins.mjs) keeps each label on one line, where there is room. */
+@media (min-width: 40rem) {
+  .sl-markdown-content table.labelled td:first-child {
+    white-space: nowrap;
+  }
+}
+
+/* On a phone, a table of three or more columns (marked by
+   rehype-plugins.mjs) reads as one card per row: the first cell as its
+   title, every other cell under its column's heading. */
+@media (max-width: 40rem) {
+  .sl-markdown-content table.stacked,
+  .sl-markdown-content table.stacked tbody,
+  .sl-markdown-content table.stacked tr,
+  .sl-markdown-content table.stacked td {
+    display: block;
+  }
+  .sl-markdown-content table.stacked thead {
+    display: none;
+  }
+  .sl-markdown-content table.stacked tr {
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--sl-color-gray-5);
+  }
+  .sl-markdown-content table.stacked td {
+    padding: 0.125rem 0;
+    border: none;
+  }
+  .sl-markdown-content table.stacked td:first-child {
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+  .sl-markdown-content table.stacked td:not(:first-child)::before {
+    content: attr(data-label);
+    display: block;
+    margin-top: 0.5rem;
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+}

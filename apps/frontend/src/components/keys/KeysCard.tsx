@@ -1,21 +1,25 @@
 import { Button, Group, Table, Text } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 import type { ApiKey } from "@lib/contract";
+import type { PagedList } from "../../logic/api/paging";
 import { formatDate, timeAgo } from "../../logic/time";
 import { Card } from "../Card";
+import { ShowMore } from "../ShowMore";
 import { NewKeyModal, type NewKeyInput } from "./NewKeyModal";
 import { ShownKeyModal } from "./ShownKeyModal";
 
 // A principal's keys with the create-once and revoke flows, for personal and
-// agent keys alike.
+// agent keys alike; `list` reads more of a paged list.
 export const KeysCard = ({
   keys,
+  list,
   gitUser,
   description,
   onCreate,
   onRevoke,
 }: {
   keys: ApiKey[];
+  list?: PagedList;
   gitUser: string;
   description: ReactNode;
   onCreate: (input: NewKeyInput) => Promise<string>;
@@ -34,6 +38,7 @@ export const KeysCard = ({
       description={description}
     >
       <KeysTable keys={keys} onRevoke={onRevoke} />
+      {list && <ShowMore list={list} />}
       <NewKeyModal
         opened={creating}
         onClose={() => setCreating(false)}

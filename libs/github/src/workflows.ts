@@ -5,6 +5,7 @@ import { moduleLogger } from "@lib/logging";
 import { copyRules, type Rule } from "@lib/review";
 import { githubApi } from "./api";
 import { connectedApi, connectionOf } from "./connections";
+import { matchesEveryWord } from "./search";
 import { connectionToken } from "./sync";
 
 const log = moduleLogger("github/workflows");
@@ -14,19 +15,27 @@ export interface GithubWorkflow extends RuleWorkflow {
   state: string;
 }
 
-// The connected repository's GitHub Actions workflows, for a run-workflow
-// rule to pick from.
-export async function listGithubWorkflows(
+// Up to `limit` of the connected repository's GitHub Actions workflows whose
+// name or path holds every word of `q`, for a run-workflow rule to pick from.
+export async function searchGithubWorkflows(
   principal: Principal,
   name: string,
+  q: string,
+  limit: number,
 ): Promise<GithubWorkflow[]> {
   const { connection, api } = await connectedApi(principal, name, "read");
   const workflows = await api.workflows(connection.owner, connection.repo);
-  log.info("workflows read", {
+  const found = workflows
+    .filter((workflow) =>
+      matchesEveryWord(`${workflow.name} ${workflow.path}`, q),
+    )
+    .slice(0, limit);
+  log.info("workflows searched", {
     connectionId: connection.id,
     workflows: workflows.length,
+    found: found.length,
   });
-  return workflows.map(({ id, name, path, state }) => ({
+  return found.map(({ id, name, path, state }) => ({
     id,
     name,
     path,

@@ -19,7 +19,9 @@ import {
 import { Card } from "../../components/Card";
 import { CodeBlock } from "../../components/CopyField";
 import { KeysCard } from "../../components/keys/KeysCard";
+import { ShowMore } from "../../components/ShowMore";
 import { orpc } from "../../logic/api/orpc";
+import { nextPage, usePagedList } from "../../logic/api/paging";
 import { errorMessage } from "../../logic/api/errors";
 import { SkeletonCards } from "../../components/skeletons";
 
@@ -120,8 +122,11 @@ const LEVEL_OPTIONS = [
 
 const AccessCard = ({ agent }: { agent: AgentDetail }) => {
   const refresh = useRefreshAgent();
-  const { data: repositories } = useQuery(
-    orpc.repositories.list.queryOptions(),
+  const repositories = usePagedList(
+    orpc.repositories.list.infiniteOptions({
+      input: (cursor) => ({ cursor }),
+      ...nextPage,
+    }),
   );
   const granted = new Map(agent.access.map((a) => [a.repository, a.level]));
   const set = (repository: string, value: string) =>
@@ -140,7 +145,7 @@ const AccessCard = ({ agent }: { agent: AgentDetail }) => {
     >
       <Table verticalSpacing="xs">
         <Table.Tbody>
-          {(repositories ?? []).map((repo) => (
+          {(repositories.items ?? []).map((repo) => (
             <Table.Tr key={repo.id}>
               <Table.Td>
                 <Text size="sm" fw={600}>
@@ -169,6 +174,7 @@ const AccessCard = ({ agent }: { agent: AgentDetail }) => {
           ))}
         </Table.Tbody>
       </Table>
+      <ShowMore list={repositories} />
     </Card>
   );
 };

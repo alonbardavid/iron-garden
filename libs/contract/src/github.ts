@@ -1,5 +1,12 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
+import {
+  listPageSchema,
+  listQuerySchema,
+  pageQuerySchema,
+  searchQuerySchema,
+  searchResultsSchema,
+} from "./listing";
 
 // GitHub's own rules for owner and repository names.
 const githubNameSchema = z
@@ -157,9 +164,24 @@ const download = z.object({ url: z.string() });
 const githubId = z.coerce.number<number>().int().positive();
 
 export const githubTokensContract = {
+  // The caller's tokens, newest first; `q` keeps those whose name or GitHub
+  // login holds every word of it.
   list: oc
     .route({ method: "GET", path: "/api/account/github-tokens" })
-    .output(z.array(githubTokenSchema)),
+    .input(
+      listQuerySchema(githubTokenSchema, {
+        sorts: ["createdAt", "name"],
+        filters: {},
+        defaultDir: "desc",
+      }),
+    )
+    .output(listPageSchema(githubTokenSchema)),
+  // The caller's newest tokens whose name or GitHub login holds every word
+  // of `q`.
+  search: oc
+    .route({ method: "GET", path: "/api/search/github-tokens" })
+    .input(searchQuerySchema)
+    .output(searchResultsSchema(githubTokenSchema)),
   create: oc
     .route({ method: "POST", path: "/api/account/github-tokens" })
     .input(
@@ -173,14 +195,15 @@ export const githubTokensContract = {
     .route({ method: "DELETE", path: "/api/account/github-tokens/{id}" })
     .input(z.object({ id: z.string() }))
     .output(ok),
-  // The GitHub repositories the token can reach, most recently pushed first.
+  // The GitHub repositories the token can reach whose "owner/repo" holds
+  // every word of `q`, most recently pushed first.
   repositories: oc
     .route({
       method: "GET",
       path: "/api/account/github-tokens/{id}/repositories",
     })
-    .input(z.object({ id: z.string() }))
-    .output(z.array(githubTokenRepositorySchema)),
+    .input(searchQuerySchema.extend({ id: z.string() }))
+    .output(searchResultsSchema(githubTokenRepositorySchema)),
 };
 
 export const repositoryGithubContract = {
@@ -234,34 +257,36 @@ export const repositoryGithubContract = {
     .route({ method: "POST", path: "/api/repositories/{name}/github/sync" })
     .input(byName)
     .output(githubConnectionSchema),
-  // Newest first, as GitHub reported them.
+  // Newest first, as GitHub reported them, a page at a time.
   runs: oc
     .route({ method: "GET", path: "/api/repositories/{name}/github/runs" })
     .input(
-      byName.extend({
-        sha: z
-          .string()
-          .regex(/^[0-9a-f]{40}$/)
-          .optional(),
-        branch: z.string().min(1).max(200).optional(),
-        limit: z.coerce.number<number>().int().min(1).max(100).default(30),
-      }),
+      pageQuerySchema()
+        .extend(byName.shape)
+        .extend({
+          sha: z
+            .string()
+            .regex(/^[0-9a-f]{40}$/)
+            .optional(),
+          branch: z.string().min(1).max(200).optional(),
+        }),
     )
-    .output(z.array(workflowRunSchema)),
+    .output(listPageSchema(workflowRunSchema)),
+  // Read from GitHub a page at a time, so never counted.
   jobs: oc
     .route({
       method: "GET",
       path: "/api/repositories/{name}/github/runs/{runId}/jobs",
     })
-    .input(byName.extend({ runId: githubId }))
-    .output(z.array(workflowJobSchema)),
+    .input(pageQuerySchema().extend(byName.shape).extend({ runId: githubId }))
+    .output(listPageSchema(workflowJobSchema)),
   artifacts: oc
     .route({
       method: "GET",
       path: "/api/repositories/{name}/github/runs/{runId}/artifacts",
     })
-    .input(byName.extend({ runId: githubId }))
-    .output(z.array(workflowArtifactSchema)),
+    .input(pageQuerySchema().extend(byName.shape).extend({ runId: githubId }))
+    .output(listPageSchema(workflowArtifactSchema)),
   artifactDownload: oc
     .route({
       method: "GET",
@@ -269,10 +294,12 @@ export const repositoryGithubContract = {
     })
     .input(byName.extend({ artifactId: githubId }))
     .output(download),
+  // The connected repository's workflows whose name or path holds every word
+  // of `q`, for a run-workflow rule to pick from.
   workflows: oc
     .route({ method: "GET", path: "/api/repositories/{name}/github/workflows" })
-    .input(byName)
-    .output(z.array(githubWorkflowSchema)),
+    .input(searchQuerySchema.extend(byName.shape))
+    .output(searchResultsSchema(githubWorkflowSchema)),
   jobLogs: oc
     .route({
       method: "GET",

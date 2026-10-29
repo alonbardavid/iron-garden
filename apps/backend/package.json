@@ -30,6 +30,7 @@
     "hono": "^4.0.0"
   },
   "devDependencies": {
+    "@app/docs": "workspace:*",
     "@app/frontend": "workspace:*",
     "@cloudflare/vite-plugin": "^1.63.1",
     "@cloudflare/workers-types": "^5.20261008.1",

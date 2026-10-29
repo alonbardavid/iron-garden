@@ -44,6 +44,20 @@ Each Worker also reads two secrets, set with `wrangler secret put`: `BETTER_AUTH
 `SETUP_TOKEN` (4 characters or more), which unlocks the first-run form until the first admin
 exists.
 
+## Docs on GitHub Pages
+
+The operating docs (`apps/docs`) ship inside every Worker at `/docs/`, and `docs-pages.yml`
+also publishes them on every push to `main`: it asks GitHub for the Pages address (a custom
+domain included), builds them for it and force-pushes the result as the single commit of the
+`gh-pages` branch. A push skips publishing while Pages does not serve `gh-pages`, so a
+repository without Pages never gets the branch. One-time setup:
+
+1. Run **Docs to GitHub Pages** by hand (Actions tab), which publishes `gh-pages` regardless:
+   Settings can only pick a branch that exists.
+2. Settings › Pages › Build and deployment: **Deploy from a branch**, `gh-pages`, `/ (root)`.
+
+From then on each push to `main` republishes them.
+
 ## Preview
 
 Every push to a non-`main` branch gets its own environment:

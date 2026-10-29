@@ -108,16 +108,23 @@ test("an agent starts a session, pushes a branch and groups its pull request", a
     ).toBe(403);
     await json(await request.put(reviewUrl, { data: accept }));
 
-    const listed = await json<{ number: number; status: string }[]>(
+    const listed = await json<{
+      items: { number: number; status: string }[];
+      nextCursor: string | null;
+    }>(
       await request.get(`${API}/api/repositories/${repository}/pull-requests`),
     );
-    expect(listed).toEqual([
-      expect.objectContaining({
-        number: created.pullRequest.number,
-        status: "open",
-        review: { changes: 2, accepted: 1 },
-      }),
-    ]);
+    expect(listed).toEqual({
+      items: [
+        expect.objectContaining({
+          number: created.pullRequest.number,
+          status: "open",
+          review: { changes: 2, accepted: 1 },
+        }),
+      ],
+      nextCursor: null,
+      total: null,
+    });
   } finally {
     await request.delete(`${API}/api/repositories/${repository}`);
   }

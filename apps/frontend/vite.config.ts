@@ -22,6 +22,10 @@ export default defineConfig({
       // ws: agents may hold their chat socket open through this server too.
       "/api": { target: "http://localhost:8301", ws: true },
       "^/[a-z0-9-]+\\.git/": "http://localhost:8301",
+      // The docs as last built (apps/docs); `pnpm --filter @app/docs dev`
+      // serves them live while writing. A missing page shows blank here: the
+      // Worker answers it with the built SPA, whose assets only it serves.
+      "^/docs(/|$)": "http://localhost:8301",
       // A session repository, /<session id>.git/.
       "^/SES_[0-9a-f-]+\\.git/": "http://localhost:8301",
     },

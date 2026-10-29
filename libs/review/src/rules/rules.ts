@@ -10,6 +10,11 @@ import {
   desc,
   eq,
   inArray,
+  paginate,
+  matchesAllTerms,
+  searchTerms,
+  type ListRequest,
+  type ListResult,
   ne,
   type RuleAction,
   type RuleMatch,
@@ -49,6 +54,16 @@ export interface Rule {
   updatedAt: number;
 }
 
+// A rule of another repository, and whether this one already has a rule of
+// the same name that matches the same way.
+export interface CopyableRule extends Rule {
+  already: boolean;
+}
+
+export type RuleListRequest = ListRequest<"createdAt" | "name"> & {
+  q?: string;
+};
+
 type RuleRow = typeof repositoryRules.$inferSelect;
 
 // Anyone who can read a repository can read its rules, so they can be copied
@@ -56,14 +71,52 @@ type RuleRow = typeof repositoryRules.$inferSelect;
 export async function listRules(
   principal: Principal,
   repositoryName: string,
-): Promise<Rule[]> {
+  request: RuleListRequest,
+): Promise<ListResult<Rule>> {
   const repository = await authorize(principal, repositoryName, "read");
-  const rows = await getDb()
-    .select()
-    .from(repositoryRules)
-    .where(eq(repositoryRules.repositoryId, repository.id))
-    .orderBy(asc(repositoryRules.createdAt));
-  return describe(repository, rows);
+  const page = await pageOfRules(repository, request);
+  return { ...page, items: await describe(repository, page.items) };
+}
+
+// A page of `fromName`'s rules to copy into this repository, each marked
+// `already` when this one has a rule of the same name that matches the same
+// way.
+export async function listCopyableRules(
+  principal: Principal,
+  repositoryName: string,
+  fromName: string,
+  request: RuleListRequest,
+): Promise<ListResult<CopyableRule>> {
+  const repository = await authorize(principal, repositoryName, "read");
+  const from = await authorize(principal, fromName, "read");
+  const page = await pageOfRules(from, request);
+  const names = [...new Set(page.items.map((row) => row.name))];
+  const [rules, ours] = await Promise.all([
+    describe(from, page.items),
+    names.length
+      ? getDb()
+          .select({ name: repositoryRules.name, match: repositoryRules.match })
+          .from(repositoryRules)
+          .where(
+            and(
+              eq(repositoryRules.repositoryId, repository.id),
+              inArray(repositoryRules.name, names),
+            ),
+          )
+      : Promise.resolve([]),
+  ]);
+  const here = new Set(ours.map(ruleKey));
+  const items = rules.map((rule) => ({
+    ...rule,
+    already: here.has(ruleKey(rule)),
+  }));
+  log.debug("copyable rules read", {
+    repositoryId: repository.id,
+    fromRepositoryId: from.id,
+    rules: items.length,
+    already: items.filter((rule) => rule.already).length,
+  });
+  return { ...page, items };
 }
 
 export async function getRule(
@@ -205,10 +258,20 @@ export async function copyRules(
     rules: copied.length,
     dropped: dropped.length,
   });
-  const all = await listRules(principal, repositoryName);
-  const added = new Set(copied.map((c) => c.id));
+  const added = copied.length
+    ? await db
+        .select()
+        .from(repositoryRules)
+        .where(
+          inArray(
+            repositoryRules.id,
+            copied.map((c) => c.id),
+          ),
+        )
+        .orderBy(asc(repositoryRules.createdAt), asc(repositoryRules.id))
+    : [];
   return {
-    rules: all.filter((rule) => added.has(rule.id)),
+    rules: await describe(repository, added),
     dropped: dropped.map((row) => row.name),
   };
 }
@@ -250,6 +313,33 @@ export async function snapshotRules(
       }),
     ),
   ];
+}
+
+// The repository's rules a page at a time, oldest first unless `sort` says
+// otherwise; `q` keeps those whose name holds every word of it.
+function pageOfRules(
+  repository: AccessibleRepository,
+  request: RuleListRequest,
+) {
+  return paginate(
+    getDb()
+      .select()
+      .from(repositoryRules)
+      .where(eq(repositoryRules.repositoryId, repository.id))
+      .$dynamic(),
+    request,
+    {
+      defaultSort: "createdAt",
+      filters: {
+        q: (q) => matchesAllTerms(repositoryRules.name, searchTerms(q)),
+      },
+    },
+  );
+}
+
+// Two rules are the same when they share a name and match the same way.
+function ruleKey(rule: { name: string; match: RuleMatch }): string {
+  return JSON.stringify([rule.name, rule.match]);
 }
 
 async function findRule(

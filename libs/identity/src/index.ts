@@ -16,6 +16,7 @@ export {
 export {
   createKey,
   listKeys,
+  listPersonalKeys,
   revokeKey,
   type KeySummary,
   type CreatedKey,
@@ -41,6 +42,7 @@ export {
 export {
   getUserProfile,
   getUserProfiles,
-  listUserProfiles,
+  searchUserProfiles,
+  userMatches,
   type UserProfile,
 } from "./profile";

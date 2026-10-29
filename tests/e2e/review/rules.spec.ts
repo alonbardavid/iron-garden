@@ -166,7 +166,7 @@ test("an admin creates, turns off, edits, copies and deletes rules", async ({
   const dialog = page.getByRole("dialog", {
     name: "Copy rules from another repository",
   });
-  await dialog.getByLabel("Repository").click();
+  await dialog.getByLabel("Repository").fill(f.repository);
   await page.getByRole("option", { name: f.repository }).click();
   await expect(page).toHaveURL(/copy=rules-fixture/);
   await dialog.getByRole("checkbox", { name: "Money math" }).check();

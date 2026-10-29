@@ -1,8 +1,11 @@
 import { Badge, Button, Group, Menu, Table, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { LIST_DEFAULT_LIMIT, type ListPage } from "@lib/contract";
 import { Card } from "../../components/Card";
+import { ShowMore } from "../../components/ShowMore";
+import { nextPage, usePagedList } from "../../logic/api/paging";
 import { authClient } from "../../logic/authentication/client";
 import { useSignedInMe } from "../../logic/authentication/useMe";
 import { NewUserModal } from "./NewUserModal";
@@ -32,17 +35,10 @@ export const UsersScreen = () => {
     username: string;
     password: string;
   } | null>(null);
-  const { data: users } = useQuery({
+  const users = usePagedList({
     queryKey: USERS_KEY,
-    queryFn: async () => {
-      const { data, error } = await authClient.admin.listUsers({
-        query: { limit: 500, sortBy: "name" },
-      });
-      if (error) {
-        throw new Error(error.message ?? "Could not list users");
-      }
-      return data.users as AdminUser[];
-    },
+    queryFn: ({ pageParam }) => listUsers(Number(pageParam ?? 0)),
+    ...nextPage,
   });
   return (
     <Card
@@ -63,12 +59,13 @@ export const UsersScreen = () => {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {(users ?? []).map((user) => (
+          {(users.items ?? []).map((user) => (
             <UserRow key={user.id} user={user} onPassword={setShown} />
           ))}
         </Table.Tbody>
       </Table>
-      {!users && <SkeletonRows rows={4} />}
+      {!users.items && <SkeletonRows rows={4} />}
+      <ShowMore list={users} />
       <NewUserModal
         opened={creating}
         onClose={() => setCreating(false)}
@@ -85,6 +82,22 @@ export const UsersScreen = () => {
     </Card>
   );
 };
+
+// A page of users by name; better-auth pages by offset, which is the cursor.
+async function listUsers(offset: number): Promise<ListPage<AdminUser>> {
+  const { data, error } = await authClient.admin.listUsers({
+    query: { limit: LIST_DEFAULT_LIMIT, offset, sortBy: "name" },
+  });
+  if (error) {
+    throw new Error(error.message ?? "Could not list users");
+  }
+  const next = offset + data.users.length;
+  return {
+    items: data.users as AdminUser[],
+    nextCursor: next < data.total ? String(next) : null,
+    total: { count: data.total, capped: false },
+  };
+}
 
 const UserRow = ({
   user,

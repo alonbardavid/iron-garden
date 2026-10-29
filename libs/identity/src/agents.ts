@@ -1,4 +1,16 @@
-import { getDb, agents, user, newEntityId, and, eq, asc } from "@lib/db-models";
+import {
+  getDb,
+  agents,
+  user,
+  newEntityId,
+  and,
+  eq,
+  matchesAllTerms,
+  paginate,
+  searchTerms,
+  type ListRequest,
+  type ListResult,
+} from "@lib/db-models";
 import { moduleLogger } from "@lib/logging";
 import { revokeAgentKeys } from "./keys";
 
@@ -20,13 +32,25 @@ export class AgentNameTaken extends Error {
   }
 }
 
-export async function listAgents(ownerUserId: string): Promise<Agent[]> {
-  const rows = await getDb()
-    .select()
-    .from(agents)
-    .where(eq(agents.ownerUserId, ownerUserId))
-    .orderBy(asc(agents.name));
-  return rows.map(toAgent);
+// A user's agents a page at a time, by name unless asked otherwise; `q` keeps
+// those whose name holds every word of it.
+export async function listAgents(
+  ownerUserId: string,
+  request: ListRequest<"name" | "createdAt"> & { q?: string },
+): Promise<ListResult<Agent>> {
+  const page = await paginate(
+    getDb()
+      .select()
+      .from(agents)
+      .where(eq(agents.ownerUserId, ownerUserId))
+      .$dynamic(),
+    request,
+    {
+      defaultSort: "name",
+      filters: { q: (q) => matchesAllTerms(agents.name, searchTerms(q)) },
+    },
+  );
+  return { ...page, items: page.items.map(toAgent) };
 }
 
 export async function getAgent(id: string): Promise<Agent | null> {

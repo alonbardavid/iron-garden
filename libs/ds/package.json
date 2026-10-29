@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./palette": {
+      "types": "./dist/palette.d.ts",
+      "default": "./dist/palette.js"
     }
   },
   "main": "./dist/index.js",

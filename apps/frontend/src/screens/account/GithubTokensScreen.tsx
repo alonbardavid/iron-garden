@@ -1,5 +1,5 @@
 import { Badge, Button, Group, Modal, Stack, Table, Text } from "@mantine/core";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import type { GithubToken } from "@lib/contract";
@@ -13,14 +13,21 @@ import {
   useForm,
 } from "@lib/ds";
 import { Card } from "../../components/Card";
+import { ShowMore } from "../../components/ShowMore";
 import { orpc } from "../../logic/api/orpc";
 import { errorMessage } from "../../logic/api/errors";
+import { nextPage, usePagedList } from "../../logic/api/paging";
 import { formatDate, timeAgo } from "../../logic/time";
 import { SkeletonRows } from "../../components/skeletons";
 
 export const GithubTokensScreen = () => {
   const [adding, setAdding] = useState(false);
-  const { data: tokens } = useQuery(orpc.githubTokens.list.queryOptions());
+  const list = usePagedList(
+    orpc.githubTokens.list.infiniteOptions({
+      input: (cursor) => ({ cursor }),
+      ...nextPage,
+    }),
+  );
   return (
     <Card
       title={
@@ -31,7 +38,14 @@ export const GithubTokensScreen = () => {
       }
       description="Personal access tokens from your GitHub account. Repositories you connect to GitHub read their branches, workflow runs and artifacts with one of them; they are stored encrypted and never shown again."
     >
-      {tokens ? <TokensTable tokens={tokens} /> : <SkeletonRows rows={2} />}
+      {list.items ? (
+        <>
+          <TokensTable tokens={list.items} />
+          <ShowMore list={list} />
+        </>
+      ) : (
+        <SkeletonRows rows={2} />
+      )}
       <AddTokenModal opened={adding} onClose={() => setAdding(false)} />
     </Card>
   );

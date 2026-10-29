@@ -1,12 +1,15 @@
-import { Group, Select } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
+import { Group } from "@mantine/core";
+import type { BranchInfo } from "@lib/contract";
 import { palette } from "@lib/ds";
 import { BranchIcon } from "../../../components/icons";
+import { SearchSelect } from "../../../components/SearchSelect";
 import { orpc } from "../../../logic/api/orpc";
 import { useRepository } from "../RepositoryLayout";
+import { isCommitHash } from "./paths";
 
-// Which branch to look at. A commit being looked at shows as itself until a
-// branch is picked. onChange gets undefined for the default branch.
+// Which branch to look at, searched by name. A commit being looked at shows
+// as itself until a branch is picked. onChange gets undefined for the
+// default branch.
 export const RefPicker = ({
   value,
   onChange,
@@ -15,25 +18,21 @@ export const RefPicker = ({
   onChange: (ref: string | undefined) => void;
 }) => {
   const { name, defaultBranch } = useRepository();
-  const { data: branches } = useQuery(
-    orpc.repositories.branches.queryOptions({ input: { name } }),
-  );
   const current = value ?? defaultBranch;
-  const names = branches?.map((branch) => branch.name) ?? [defaultBranch];
-  const options = names.includes(current)
-    ? names
-    : [...names, { value: current, label: current.slice(0, 12) }];
   return (
     <Group gap={6} wrap="nowrap" c={palette.secondary}>
       <BranchIcon />
-      <Select
+      <SearchSelect
         aria-label="Branch"
         size="xs"
         w={220}
-        searchable
         allowDeselect={false}
         nothingFoundMessage="No such branch"
-        data={options}
+        search={(q) =>
+          orpc.repositories.branches.queryOptions({ input: { name, q } })
+        }
+        toOption={(branch: BranchInfo) => refOption(branch.name)}
+        initialOption={refOption(current)}
         value={current}
         onChange={(picked) =>
           picked && onChange(picked === defaultBranch ? undefined : picked)
@@ -45,3 +44,10 @@ export const RefPicker = ({
     </Group>
   );
 };
+
+function refOption(ref: string) {
+  return {
+    value: ref,
+    label: isCommitHash(ref) ? ref.slice(0, 12) : ref,
+  };
+}

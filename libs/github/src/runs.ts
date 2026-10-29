@@ -2,14 +2,17 @@ import {
   getDb,
   githubWorkflowRuns,
   newEntityId,
+  paginate,
   and,
   desc,
   eq,
   sql,
+  type ListResult,
 } from "@lib/db-models";
+import { ForgeError } from "@lib/forge";
 import type { Principal } from "@lib/identity";
 import { moduleLogger } from "@lib/logging";
-import { GithubError, type GithubApi } from "./api";
+import { GithubError, type GithubApi, type GithubPage } from "./api";
 import { connectedApi } from "./connections";
 import type {
   ArtifactPayload,
@@ -22,6 +25,8 @@ const log = moduleLogger("github/runs");
 
 // How many of the newest runs a full sync reads.
 const REFRESHED_RUNS = 50;
+// The most runs a pull request's status shows for its head commit.
+const RUNS_AT_COMMIT = 100;
 
 export interface WorkflowRun {
   runId: number;
@@ -63,23 +68,57 @@ export interface WorkflowArtifact {
   expiresAt: number | null;
 }
 
-// The runs GitHub reported for the repository, newest first: kept as webhooks
-// and syncs deliver them, so a list never waits on GitHub.
+// A page of a list read from GitHub: the cursor is the number of the page
+// after the first.
+export interface GithubPageRequest {
+  limit: number;
+  cursor?: string;
+}
+
+// The runs GitHub reported for the repository, newest first, a page at a
+// time: kept as webhooks and syncs deliver them, so a list never waits on
+// GitHub.
 export async function listWorkflowRuns(
   principal: Principal,
   name: string,
-  filter: { sha?: string; branch?: string; limit: number },
-): Promise<WorkflowRun[]> {
+  request: { sha?: string; branch?: string; limit: number; cursor?: string },
+): Promise<ListResult<WorkflowRun>> {
   const { repository } = await connectedApi(principal, name, "read");
-  return storedRuns(repository.id, filter);
+  const page = await paginate(
+    getDb()
+      .select()
+      .from(githubWorkflowRuns)
+      .where(eq(githubWorkflowRuns.repositoryId, repository.id))
+      .$dynamic(),
+    { ...request, dir: "desc", withTotal: false },
+    {
+      defaultSort: "startedAt",
+      filters: {
+        sha: (sha) => eq(githubWorkflowRuns.headSha, sha),
+        branch: (branch) => eq(githubWorkflowRuns.headBranch, branch),
+      },
+    },
+  );
+  return { ...page, items: page.items.map(toRun) };
 }
 
 // The runs on one commit, for a pull request whose head it is.
-export function runsAt(
+export async function runsAt(
   repositoryId: string,
   sha: string,
 ): Promise<WorkflowRun[]> {
-  return storedRuns(repositoryId, { sha, limit: 100 });
+  const rows = await getDb()
+    .select()
+    .from(githubWorkflowRuns)
+    .where(
+      and(
+        eq(githubWorkflowRuns.repositoryId, repositoryId),
+        eq(githubWorkflowRuns.headSha, sha),
+      ),
+    )
+    .orderBy(desc(githubWorkflowRuns.startedAt))
+    .limit(RUNS_AT_COMMIT);
+  return rows.map(toRun);
 }
 
 // The runs on a commit as GitHub has them now, kept like delivered ones, so
@@ -115,51 +154,47 @@ export async function refreshRunsAt(
   return runsAt(connection.repositoryId, sha);
 }
 
-async function storedRuns(
-  repositoryId: string,
-  filter: { sha?: string; branch?: string; limit: number },
-): Promise<WorkflowRun[]> {
-  const rows = await getDb()
-    .select()
-    .from(githubWorkflowRuns)
-    .where(
-      and(
-        eq(githubWorkflowRuns.repositoryId, repositoryId),
-        filter.sha ? eq(githubWorkflowRuns.headSha, filter.sha) : undefined,
-        filter.branch
-          ? eq(githubWorkflowRuns.headBranch, filter.branch)
-          : undefined,
-      ),
-    )
-    .orderBy(desc(githubWorkflowRuns.startedAt))
-    .limit(filter.limit);
-  return rows.map(toRun);
-}
-
+// A run's jobs, read from GitHub a page at a time.
 export async function listWorkflowJobs(
   principal: Principal,
   name: string,
   runId: number,
-): Promise<WorkflowJob[]> {
+  request: GithubPageRequest,
+): Promise<ListResult<WorkflowJob>> {
   const { connection, api } = await connectedApi(principal, name, "read");
-  const jobs = await api.jobs(connection.owner, connection.repo, runId);
-  log.info("workflow jobs read", { connectionId: connection.id, runId });
-  return jobs.map(toJob);
+  const page = githubPage(request);
+  const jobs = await api.jobs(connection.owner, connection.repo, runId, page);
+  log.info("workflow jobs read", {
+    connectionId: connection.id,
+    runId,
+    page: page.page,
+    hasNext: jobs.hasNext,
+  });
+  return listPage(jobs.items.map(toJob), page, jobs.hasNext);
 }
 
+// A run's artifacts, read from GitHub a page at a time.
 export async function listWorkflowArtifacts(
   principal: Principal,
   name: string,
   runId: number,
-): Promise<WorkflowArtifact[]> {
+  request: GithubPageRequest,
+): Promise<ListResult<WorkflowArtifact>> {
   const { connection, api } = await connectedApi(principal, name, "read");
+  const page = githubPage(request);
   const artifacts = await api.artifacts(
     connection.owner,
     connection.repo,
     runId,
+    page,
   );
-  log.info("workflow artifacts read", { connectionId: connection.id, runId });
-  return artifacts.map(toArtifact);
+  log.info("workflow artifacts read", {
+    connectionId: connection.id,
+    runId,
+    page: page.page,
+    hasNext: artifacts.hasNext,
+  });
+  return listPage(artifacts.items.map(toArtifact), page, artifacts.hasNext);
 }
 
 // A short-lived URL the caller downloads the artifact's zip from. GitHub
@@ -237,6 +272,29 @@ export async function recordRun(
       set: { ...values, updatedAt: new Date() },
       setWhere: sql`excluded.github_updated_at >= ${githubWorkflowRuns.githubUpdatedAt}`,
     });
+}
+
+// GitHub numbers its pages from 1 at a fixed size, so a page is only ever
+// continued at the size it was asked at.
+function githubPage({ limit, cursor }: GithubPageRequest): GithubPage {
+  const page = cursor === undefined ? 1 : Number(cursor);
+  if (!Number.isSafeInteger(page) || page < 1) {
+    throw new ForgeError("BAD_REQUEST", "Not a page of this list");
+  }
+  return { perPage: limit, page };
+}
+
+// GitHub cannot count what it lists, so a page has no total.
+function listPage<Item>(
+  items: Item[],
+  page: GithubPage,
+  hasNext: boolean,
+): ListResult<Item> {
+  return {
+    items,
+    nextCursor: hasNext ? String(page.page + 1) : null,
+    total: null,
+  };
 }
 
 function toRun(row: typeof githubWorkflowRuns.$inferSelect): WorkflowRun {

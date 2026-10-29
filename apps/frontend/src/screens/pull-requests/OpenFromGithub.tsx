@@ -1,4 +1,4 @@
-import { Group, Loader, SegmentedControl, Stack } from "@mantine/core";
+import { Group, SegmentedControl, Stack } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,15 +11,16 @@ import type {
 } from "@lib/contract";
 import {
   FormGeneralErrors,
-  FormSelect,
   FormSubmitButton,
   FormTextInput,
   GENERAL_ERROR_KEY,
   StandardForm,
   useForm,
 } from "@lib/ds";
+import { FormSearchSelect } from "../../components/SearchSelect";
 import { errorMessage } from "../../logic/api/errors";
 import { orpc } from "../../logic/api/orpc";
+import { useRepository } from "../repository/RepositoryLayout";
 import { pullRequestPath } from "./paths";
 
 const SOURCES = [
@@ -38,7 +39,7 @@ export const OpenFromGithubForms = ({ name }: { name: string }) => {
       {source === "pull" ? (
         <PullForm name={name} open={open} />
       ) : (
-        <BranchSource name={name} open={open} />
+        <BranchForm name={name} open={open} />
       )}
     </Stack>
   );
@@ -52,8 +53,11 @@ const pullSchema = z.object({
 
 const PullForm = ({ name, open }: { name: string; open: Open }) => {
   const form = useForm({ initialValues: { number: "" }, schema: pullSchema });
-  const { data, isFetching, error } = useQuery(
-    orpc.pullRequests.fromGithub.pulls.queryOptions({ input: { name } }),
+  // The select's first search, read here too for GitHub's refusal.
+  const { isFetching, error } = useQuery(
+    orpc.pullRequests.fromGithub.pulls.queryOptions({
+      input: { name, q: "" },
+    }),
   );
   const submit = submitter(form, (values: typeof form.values) =>
     open({ kind: "pull", number: Number(values.number) }),
@@ -61,11 +65,15 @@ const PullForm = ({ name, open }: { name: string; open: Open }) => {
   return (
     <StandardForm form={form} onSubmit={submit}>
       <Stack>
-        <FormSelect
+        <FormSearchSelect
           name="number"
           label="GitHub pull request"
-          searchable
-          data={(data ?? []).map(pullOption)}
+          search={(q) =>
+            orpc.pullRequests.fromGithub.pulls.queryOptions({
+              input: { name, q },
+            })
+          }
+          toOption={pullOption}
           placeholder={isFetching ? "Loading pull requests…" : "Search"}
           nothingFoundMessage="No open pull request by that name"
           description={
@@ -90,55 +98,36 @@ const branchSchema = z.object({
   title: z.string().trim().min(1, "Give it a title").max(300),
 });
 
-// The branch form, once the repository's branches are known.
-const BranchSource = ({ name, open }: { name: string; open: Open }) => {
-  const { data } = useQuery(
-    orpc.repositories.branches.queryOptions({ input: { name } }),
-  );
-  return data ? (
-    <BranchForm branches={data} open={open} />
-  ) : (
-    <Group justify="center" py={24}>
-      <Loader size="sm" />
-    </Group>
-  );
-};
-
-const BranchForm = ({
-  branches,
-  open,
-}: {
-  branches: BranchInfo[];
-  open: Open;
-}) => {
-  const names = branches.map((branch) => branch.name);
+// Merges into the default branch unless told otherwise.
+const BranchForm = ({ name, open }: { name: string; open: Open }) => {
+  const { defaultBranch } = useRepository();
   const form = useForm({
-    initialValues: {
-      branch: "",
-      targetBranch: branches.find((branch) => branch.isDefault)?.name ?? "",
-      title: "",
-    },
+    initialValues: { branch: "", targetBranch: defaultBranch, title: "" },
     schema: branchSchema,
   });
+  const searchBranches = (q: string) =>
+    orpc.repositories.branches.queryOptions({ input: { name, q } });
   const submit = submitter(form, (values: typeof form.values) =>
     open({ kind: "branch", ...values, title: values.title.trim() }),
   );
   return (
     <StandardForm form={form} onSubmit={submit}>
       <Stack>
-        <FormSelect
+        <FormSearchSelect
           name="branch"
           label="Branch"
-          searchable
-          data={names}
+          search={searchBranches}
+          toOption={branchOption}
+          placeholder="Search branches"
           description="Branches synced from GitHub"
           data-autofocus
         />
-        <FormSelect
+        <FormSearchSelect
           name="targetBranch"
           label="Merge into"
-          searchable
-          data={names}
+          search={searchBranches}
+          toOption={branchOption}
+          initialOption={{ value: defaultBranch, label: defaultBranch }}
         />
         <FormTextInput name="title" label="Title" />
         <FormGeneralErrors />
@@ -159,9 +148,7 @@ function useOpen(name: string): Open {
       name,
       source,
     });
-    await queryClient.invalidateQueries({
-      queryKey: orpc.pullRequests.list.key(),
-    });
+    await queryClient.invalidateQueries({ queryKey: orpc.pullRequests.key() });
     navigate(pullRequestPath(pr));
   };
 }
@@ -178,6 +165,10 @@ function submitter<Values>(
       form.setFieldError(GENERAL_ERROR_KEY, errorMessage(err));
     }
   };
+}
+
+function branchOption(branch: BranchInfo) {
+  return { value: branch.name, label: branch.name };
 }
 
 function pullOption(pull: GithubPullOption) {

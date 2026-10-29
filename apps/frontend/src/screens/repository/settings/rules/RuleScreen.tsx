@@ -3,11 +3,9 @@ import {
   Checkbox,
   Group,
   Modal,
-  MultiSelect,
   Paper,
   Radio,
   SegmentedControl,
-  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -25,7 +23,12 @@ import type {
   RuleInput,
   RuleWorkflow,
 } from "@lib/contract";
+import { ruleWorkflowSchema } from "@lib/contract";
 import { palette } from "@lib/ds";
+import {
+  SearchMultiSelect,
+  SearchSelect,
+} from "../../../../components/SearchSelect";
 import { errorMessage } from "../../../../logic/api/errors";
 import { orpc } from "../../../../logic/api/orpc";
 import { timeAgo } from "../../../../logic/time";
@@ -135,9 +138,6 @@ const RuleForm = ({ rule }: { rule?: Rule }) => {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const { data: access } = useQuery(
-    orpc.repositories.members.list.queryOptions({ input: { name } }),
-  );
   const set = (patch: Partial<Draft>) =>
     setDraft((current) => ({ ...current, ...patch }));
   const back = `/r/${name}/settings/rules`;
@@ -339,16 +339,21 @@ const RuleForm = ({ rule }: { rule?: Rule }) => {
           ]}
         />
         {draft.action === "require-review" && (
-          <MultiSelect
+          <SearchMultiSelect
             ml={36}
             label="Reviewers"
             description="Members of this repository. Someone who loses access is skipped."
             inputWrapperOrder={["label", "input", "description"]}
             placeholder="Add a person"
-            searchable
-            data={(access?.members ?? []).map((m) => ({
-              value: m.user.id,
-              label: m.user.name,
+            search={(q) =>
+              orpc.repositories.members.search.queryOptions({
+                input: { name, q },
+              })
+            }
+            toOption={(m) => ({ value: m.user.id, label: m.user.name })}
+            initialOptions={(rule?.reviewers ?? []).map((r) => ({
+              value: r.id,
+              label: r.name,
             }))}
             value={draft.reviewers}
             onChange={(reviewers) => set({ reviewers })}
@@ -424,9 +429,10 @@ const WorkflowPicker = ({
   const { data: connection, isLoading } = useQuery(
     orpc.repositories.github.get.queryOptions({ input: { name } }),
   );
-  const { data: workflows, error } = useQuery(
+  // The picker's first search, read here too for GitHub's refusal.
+  const { error } = useQuery(
     orpc.repositories.github.workflows.queryOptions({
-      input: { name },
+      input: { name, q: "" },
       enabled: !!connection,
     }),
   );
@@ -439,7 +445,7 @@ const WorkflowPicker = ({
     );
   }
   return (
-    <Select
+    <SearchSelect
       ml={36}
       label="Workflow"
       description={
@@ -448,23 +454,29 @@ const WorkflowPicker = ({
           : "From the connected GitHub repository's .github/workflows."
       }
       inputWrapperOrder={["label", "input", "description"]}
-      placeholder="Pick a workflow"
-      data={(workflows ?? []).map((w) => ({
-        value: String(w.id),
-        label: `${w.name} (${w.path})`,
-      }))}
-      value={value ? String(value.id) : null}
-      onChange={(id) => {
-        const picked = workflows?.find((w) => String(w.id) === id);
-        onChange(
-          picked
-            ? { id: picked.id, name: picked.name, path: picked.path }
-            : null,
-        );
-      }}
+      placeholder="Search workflows"
+      disabled={!connection}
+      search={(q) =>
+        orpc.repositories.github.workflows.queryOptions({ input: { name, q } })
+      }
+      toOption={workflowOption}
+      initialOption={value ? workflowOption(value) : null}
+      value={value ? workflowOption(value).value : null}
+      onChange={(picked) =>
+        onChange(picked ? ruleWorkflowSchema.parse(JSON.parse(picked)) : null)
+      }
     />
   );
 };
+
+// A workflow's option carries all a rule keeps of it, so picking one needs
+// no lookup.
+function workflowOption({ id, name, path }: RuleWorkflow) {
+  return {
+    value: JSON.stringify({ id, name, path }),
+    label: `${name} (${path})`,
+  };
+}
 
 const Paths = ({
   draft,

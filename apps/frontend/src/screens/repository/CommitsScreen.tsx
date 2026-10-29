@@ -1,7 +1,7 @@
 import { Button, Group, Paper } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import type { Commit } from "@lib/contract";
+import { LIST_DEFAULT_LIMIT, type Commit } from "@lib/contract";
 import { palette } from "@lib/ds";
 import { CodeIcon } from "../../components/icons";
 import { Message } from "../../components/Message";
@@ -14,7 +14,7 @@ import { RefPicker } from "./code/RefPicker";
 import { useRepository } from "./RepositoryLayout";
 import { SkeletonList } from "../../components/skeletons";
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = LIST_DEFAULT_LIMIT;
 
 // A branch's commits, newest first, a page at a time; each one opens its
 // changes, or the code as it was then.

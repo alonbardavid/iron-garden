@@ -1,4 +1,15 @@
-import { getDb, user, eq, inArray } from "@lib/db-models";
+import {
+  getDb,
+  user,
+  and,
+  asc,
+  eq,
+  inArray,
+  matchesAllTerms,
+  searchTerms,
+  sql,
+  type SQL,
+} from "@lib/db-models";
 
 export interface UserProfile {
   id: string;
@@ -43,9 +54,27 @@ export async function getUserProfiles(
   return new Map(rows.map((row) => [row.id, toProfile(row)]));
 }
 
-export async function listUserProfiles(): Promise<UserProfile[]> {
-  const rows = await getDb().select(columns).from(user).orderBy(user.name);
+// Up to `limit` active users matching `q` (see userMatches), by name.
+export async function searchUserProfiles(
+  q: string,
+  limit: number,
+): Promise<UserProfile[]> {
+  const rows = await getDb()
+    .select(columns)
+    .from(user)
+    .where(and(eq(user.banned, false), userMatches(q)))
+    .orderBy(asc(user.name), asc(user.id))
+    .limit(limit);
   return rows.map(toProfile);
+}
+
+// Whether a user's name, username or email between them hold every word of
+// `q`; no condition when it is empty.
+export function userMatches(q: string): SQL | undefined {
+  return matchesAllTerms(
+    sql`${user.name} || ' ' || coalesce(${user.username}, '') || ' ' || ${user.email}`,
+    searchTerms(q),
+  );
 }
 
 function toProfile(row: {

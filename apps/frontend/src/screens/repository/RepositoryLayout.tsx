@@ -134,12 +134,10 @@ const PullRequestsTab = ({
   current: boolean;
 }) => {
   const { name } = useRepository();
-  const { data: pullRequests } = useQuery(
-    orpc.pullRequests.list.queryOptions({ input: { name } }),
+  const { data: counts } = useQuery(
+    orpc.pullRequests.counts.queryOptions({ input: { name } }),
   );
-  const open = pullRequests?.filter(
-    (pr) => pr.status === "open" || pr.status === "processing",
-  ).length;
+  const open = counts?.open;
   return (
     <NavTab
       to={`${base}/pulls`}

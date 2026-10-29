@@ -2,8 +2,8 @@ import {
   createRepository,
   deleteRepository,
   getRepository,
-  listBranches,
   listCommits,
+  listAgentGrants,
   listMembers,
   listRepositoryFiles,
   listRepositoriesWithStats,
@@ -11,10 +11,15 @@ import {
   readCommitFile,
   readRepositoryPath,
   removeMember,
+  searchBranches,
+  searchMembers,
+  searchRepositories,
   setMember,
   updateRepository,
   type AccessibleRepository,
+  type Member,
 } from "@lib/forge";
+import { AUTOCOMPLETE_LIMIT } from "@lib/contract";
 import type { UserProfile } from "@lib/identity";
 import {
   chatWithSession,
@@ -28,6 +33,7 @@ import {
   createRule,
   deleteRule,
   getRule,
+  listCopyableRules,
   listRules,
   setRuleEnabled,
   updateRule,
@@ -64,15 +70,28 @@ export const toUser = ({
   active,
 });
 
+const toMember = ({ user, level }: Member) => ({ user: toUser(user), level });
+
 const ok = { ok: true as const };
 
 export const repositories = api.repositories.router({
   list: api.repositories.list.handler(
-    async ({ context: { principal, origin } }) =>
-      (await listRepositoriesWithStats(principal)).map((repo) => ({
-        ...toRepository(origin, repo),
-        stats: repo.stats,
-      })),
+    async ({ context: { principal, origin }, input }) => {
+      const page = await listRepositoriesWithStats(principal, input);
+      return {
+        ...page,
+        items: page.items.map((repo) => ({
+          ...toRepository(origin, repo),
+          stats: repo.stats,
+        })),
+      };
+    },
+  ),
+  search: api.repositories.search.handler(
+    async ({ context: { principal, origin }, input }) =>
+      (await searchRepositories(principal, input.q, AUTOCOMPLETE_LIMIT)).map(
+        (repo) => toRepository(origin, repo),
+      ),
   ),
   create: api.repositories.create.handler(
     async ({ context: { principal, origin }, input }) =>
@@ -96,7 +115,8 @@ export const repositories = api.repositories.router({
     listRepositoryFiles(principal, input.name, input.ref),
   ),
   branches: api.repositories.branches.handler(
-    ({ context: { principal }, input }) => listBranches(principal, input.name),
+    ({ context: { principal }, input }) =>
+      searchBranches(principal, input.name, input.q, AUTOCOMPLETE_LIMIT),
   ),
   commits: api.repositories.commits.handler(
     ({ context: { principal }, input: { name, ...page } }) =>
@@ -127,16 +147,25 @@ export const repositories = api.repositories.router({
   ),
   members: {
     list: api.repositories.members.list.handler(
-      async ({ context: { principal }, input }) => {
-        const { members, agents } = await listMembers(principal, input.name);
-        return {
-          members: members.map((m) => ({
-            user: toUser(m.user),
-            level: m.level,
-          })),
-          agents,
-        };
+      async ({ context: { principal }, input: { name, ...page } }) => {
+        const members = await listMembers(principal, name, page);
+        return { ...members, items: members.items.map(toMember) };
       },
+    ),
+    agents: api.repositories.members.agents.handler(
+      ({ context: { principal }, input: { name, ...page } }) =>
+        listAgentGrants(principal, name, page),
+    ),
+    search: api.repositories.members.search.handler(
+      async ({ context: { principal }, input }) =>
+        (
+          await searchMembers(
+            principal,
+            input.name,
+            input.q,
+            AUTOCOMPLETE_LIMIT,
+          )
+        ).map(toMember),
     ),
     set: api.repositories.members.set.handler(
       async ({ context: { principal }, input }) => {
@@ -184,7 +213,12 @@ export const repositories = api.repositories.router({
   },
   rules: {
     list: api.repositories.rules.list.handler(
-      ({ context: { principal }, input }) => listRules(principal, input.name),
+      ({ context: { principal }, input: { name, ...request } }) =>
+        listRules(principal, name, request),
+    ),
+    copyable: api.repositories.rules.copyable.handler(
+      ({ context: { principal }, input: { name, from, ...request } }) =>
+        listCopyableRules(principal, name, from, request),
     ),
     get: api.repositories.rules.get.handler(
       ({ context: { principal }, input }) =>

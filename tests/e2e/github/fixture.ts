@@ -17,6 +17,9 @@ export const GITHUB_FIXTURE = {
   connectionId: "GHC_00000000-0000-4000-8000-0000000000e2",
   webhookSecret: "e2e-webhook-secret-0123456789abcdef",
   tokenName: "acme org",
+  // More of the admin's tokens than an autocomplete offers, all older than
+  // the one above.
+  spareTokens: 6,
   // Open pull requests whose branches GitHub pull requests will name.
   pullRequests: {
     linked: { number: 1, branch: "feature/login" },
@@ -36,10 +39,21 @@ export async function buildGithubFixtureSql(): Promise<string> {
     `INSERT INTO repositories (id, name, artifacts_name) VALUES ('${repositoryId}', '${f.repository}', '${repositoryId}');`,
     `INSERT INTO repository_members (repository_id, user_id, level) VALUES ('${repositoryId}', ${userId(TEST_ADMIN.username)}, 'admin'), ('${repositoryId}', ${userId(TEST_USER.username)}, 'read');`,
     `INSERT INTO github_tokens (id, user_id, name, token_ciphertext, token_hint, github_login) VALUES ('${tokenId}', ${userId(TEST_ADMIN.username)}, '${f.tokenName}', '${await encrypt(key, "github_pat_e2e_not_a_real_token")}', 'oken', 'acme-bot');`,
+    ...(await spareTokensSql(key)),
     `INSERT INTO github_connections (id, repository_id, owner, repo, token_id, webhook_secret_ciphertext) VALUES ('${f.connectionId}', '${repositoryId}', '${f.owner}', '${f.repo}', '${tokenId}', '${await encrypt(key, f.webhookSecret)}');`,
     ...Object.values(f.pullRequests).map(
       (pr) =>
         `INSERT INTO pull_requests (id, repository_id, number, title, branch, target_branch, base_commit, head_commit, status) VALUES ('${newEntityId("PULL_REQUEST")}', '${repositoryId}', ${pr.number}, 'Work on ${pr.branch}', '${pr.branch}', 'main', '${"a".repeat(40)}', '${"b".repeat(40)}', 'open');`,
     ),
   ].join("\n");
+}
+
+async function spareTokensSql(key: CryptoKey): Promise<string[]> {
+  return Promise.all(
+    Array.from(
+      { length: GITHUB_FIXTURE.spareTokens },
+      async (_, i) =>
+        `INSERT INTO github_tokens (id, user_id, name, token_ciphertext, token_hint, github_login, created_at) VALUES ('${newEntityId("GITHUB_TOKEN")}', ${userId(TEST_ADMIN.username)}, 'spare ${i + 1}', '${await encrypt(key, `github_pat_e2e_spare_${i + 1}`)}', 'are${i + 1}', 'spare-bot', ${Date.UTC(2026, 0, 1) + i});`,
+    ),
+  );
 }

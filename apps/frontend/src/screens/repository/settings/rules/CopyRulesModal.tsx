@@ -4,21 +4,20 @@ import {
   Group,
   List,
   Modal,
-  Select,
   Stack,
   Text,
 } from "@mantine/core";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import type { Rule } from "@lib/contract";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState, type Dispatch, type SetStateAction } from "react";
+import type { CopyableRule } from "@lib/contract";
 import { palette } from "@lib/ds";
+import { SearchSelect } from "../../../../components/SearchSelect";
+import { ShowMore } from "../../../../components/ShowMore";
 import { errorMessage } from "../../../../logic/api/errors";
 import { orpc } from "../../../../logic/api/orpc";
+import { nextPage, usePagedList } from "../../../../logic/api/paging";
 import { actionSummary, matchSummary } from "../../../../logic/rules";
 import { useRepository } from "../../RepositoryLayout";
-
-const sameRule = (a: Rule, b: Rule) =>
-  a.name === b.name && JSON.stringify(a.match) === JSON.stringify(b.match);
 
 // Picks rules from another repository the person can read and copies them
 // here. The repository picked is in the URL.
@@ -33,23 +32,10 @@ export const CopyRulesModal = ({
 }) => {
   const { name } = useRepository();
   const queryClient = useQueryClient();
-  const { data: repositories } = useQuery(
-    orpc.repositories.list.queryOptions(),
-  );
-  const { data: ours } = useQuery(
-    orpc.repositories.rules.list.queryOptions({ input: { name } }),
-  );
-  const { data: theirs } = useQuery(
-    orpc.repositories.rules.list.queryOptions({
-      input: { name: from ?? "" },
-      enabled: !!from,
-    }),
-  );
   const [picked, setPicked] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dropped, setDropped] = useState<string[] | null>(null);
-  const present = (rule: Rule) => !!ours?.some((r) => sameRule(r, rule));
   const copy = async () => {
     if (!from) {
       return;
@@ -86,69 +72,25 @@ export const CopyRulesModal = ({
       radius={10}
     >
       <Stack gap={14}>
-        <Select
+        <SearchSelect
           label="Repository"
-          placeholder="Pick a repository"
-          data={(repositories ?? [])
-            .filter((r) => r.name !== name)
-            .map((r) => r.name)}
+          placeholder="Search repositories"
+          search={(q) =>
+            orpc.repositories.search.queryOptions({
+              input: { q },
+              select: (found) => found.filter((r) => r.name !== name),
+            })
+          }
+          toOption={(r) => ({ value: r.name, label: r.name })}
+          initialOption={from ? { value: from, label: from } : null}
           value={from}
           onChange={(value) => {
             setPicked([]);
             onFrom(value);
           }}
-          searchable
         />
-        {from && theirs && (
-          <Stack gap={0}>
-            <Text size="xs" fw={600} c="dimmed" mb={4}>
-              Rules in {from}
-            </Text>
-            {theirs.length === 0 && (
-              <Text size="sm" c="dimmed">
-                {from} has no rules.
-              </Text>
-            )}
-            {theirs.map((rule) => {
-              const already = present(rule);
-              return (
-                <Group
-                  key={rule.id}
-                  gap={10}
-                  py={8}
-                  wrap="nowrap"
-                  style={{ borderTop: `1px solid ${palette.line}` }}
-                >
-                  <Checkbox
-                    aria-label={rule.name}
-                    checked={already || picked.includes(rule.id)}
-                    disabled={already}
-                    onChange={(e) => {
-                      const on = e.currentTarget.checked;
-                      setPicked((current) =>
-                        on
-                          ? [...current, rule.id]
-                          : current.filter((id) => id !== rule.id),
-                      );
-                    }}
-                  />
-                  <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
-                    <Text size="sm" fw={500} c={already ? "dimmed" : undefined}>
-                      {rule.name}
-                    </Text>
-                    <Text size="xs" c="dimmed" truncate>
-                      {matchSummary(rule.match)} · {actionSummary(rule)}
-                    </Text>
-                  </Stack>
-                  {already && (
-                    <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
-                      already in {name}
-                    </Text>
-                  )}
-                </Group>
-              );
-            })}
-          </Stack>
+        {from && (
+          <CopyableRules from={from} picked={picked} onPick={setPicked} />
         )}
         <Text size="xs" c={palette.muted}>
           Copies are independent: later edits in {from ?? "that repository"} do
@@ -169,6 +111,96 @@ export const CopyRulesModal = ({
         </Group>
       </Stack>
     </Modal>
+  );
+};
+
+// The rules of `from`, a page at a time, with a box to pick each; one this
+// repository already has is ticked and cannot be picked.
+const CopyableRules = ({
+  from,
+  picked,
+  onPick,
+}: {
+  from: string;
+  picked: string[];
+  onPick: Dispatch<SetStateAction<string[]>>;
+}) => {
+  const { name } = useRepository();
+  const rules = usePagedList(
+    orpc.repositories.rules.copyable.infiniteOptions({
+      input: (cursor) => ({ name, from, cursor }),
+      ...nextPage,
+    }),
+  );
+  if (!rules.items) {
+    return null;
+  }
+  return (
+    <Stack gap={0}>
+      <Text size="xs" fw={600} c="dimmed" mb={4}>
+        Rules in {from}
+      </Text>
+      {rules.items.length === 0 && (
+        <Text size="sm" c="dimmed">
+          {from} has no rules.
+        </Text>
+      )}
+      {rules.items.map((rule) => (
+        <CopyableRuleRow
+          key={rule.id}
+          rule={rule}
+          picked={picked.includes(rule.id)}
+          onPicked={(on) =>
+            onPick((current) =>
+              on
+                ? [...current, rule.id]
+                : current.filter((id) => id !== rule.id),
+            )
+          }
+        />
+      ))}
+      <ShowMore list={rules} />
+    </Stack>
+  );
+};
+
+const CopyableRuleRow = ({
+  rule,
+  picked,
+  onPicked,
+}: {
+  rule: CopyableRule;
+  picked: boolean;
+  onPicked: (on: boolean) => void;
+}) => {
+  const { name } = useRepository();
+  return (
+    <Group
+      gap={10}
+      py={8}
+      wrap="nowrap"
+      style={{ borderTop: `1px solid ${palette.line}` }}
+    >
+      <Checkbox
+        aria-label={rule.name}
+        checked={rule.already || picked}
+        disabled={rule.already}
+        onChange={(e) => onPicked(e.currentTarget.checked)}
+      />
+      <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
+        <Text size="sm" fw={500} c={rule.already ? "dimmed" : undefined}>
+          {rule.name}
+        </Text>
+        <Text size="xs" c="dimmed" truncate>
+          {matchSummary(rule.match)} · {actionSummary(rule)}
+        </Text>
+      </Stack>
+      {rule.already && (
+        <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+          already in {name}
+        </Text>
+      )}
+    </Group>
   );
 };
 

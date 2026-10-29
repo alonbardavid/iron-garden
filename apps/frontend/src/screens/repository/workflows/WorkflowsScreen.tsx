@@ -16,8 +16,10 @@ import { palette } from "@lib/ds";
 import { BranchIcon, ChevronIcon } from "../../../components/icons";
 import { Message } from "../../../components/Message";
 import { Page } from "../../../components/Page";
+import { ShowMore } from "../../../components/ShowMore";
 import { orpc } from "../../../logic/api/orpc";
 import { errorMessage } from "../../../logic/api/errors";
+import { nextPage, usePagedList } from "../../../logic/api/paging";
 import { timeAgo } from "../../../logic/time";
 import { codePath } from "../code/paths";
 import { useRepository } from "../RepositoryLayout";
@@ -54,11 +56,17 @@ export const WorkflowsScreen = () => {
 
 const RunList = () => {
   const { name } = useRepository();
-  const { data: runs, error } = useQuery(
-    orpc.repositories.github.runs.queryOptions({ input: { name, limit: 50 } }),
+  const list = usePagedList(
+    orpc.repositories.github.runs.infiniteOptions({
+      input: (cursor) => ({ name, cursor }),
+      ...nextPage,
+    }),
   );
-  if (error) {
-    return <Message color={palette.removed}>{errorMessage(error)}</Message>;
+  const runs = list.items;
+  if (list.error) {
+    return (
+      <Message color={palette.removed}>{errorMessage(list.error)}</Message>
+    );
   }
   if (!runs) {
     return <SkeletonList rows={6} />;
@@ -71,7 +79,12 @@ const RunList = () => {
       </Message>
     );
   }
-  return <RunRows runs={runs} />;
+  return (
+    <>
+      <RunRows runs={runs} />
+      <ShowMore list={list} />
+    </>
+  );
 };
 
 // Runs as a list, each opening to its jobs and artifacts.

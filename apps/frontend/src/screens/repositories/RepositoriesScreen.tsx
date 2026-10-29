@@ -8,7 +8,6 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { RepositoryListItem } from "@lib/contract";
@@ -22,7 +21,9 @@ import {
   SessionIcon,
 } from "../../components/icons";
 import { Page } from "../../components/Page";
+import { ShowMore } from "../../components/ShowMore";
 import { orpc } from "../../logic/api/orpc";
+import { nextPage, usePagedList } from "../../logic/api/paging";
 import { useSignedInMe } from "../../logic/authentication/useMe";
 import { timeAgo } from "../../logic/time";
 import { Loading, SkeletonText } from "../../components/skeletons";
@@ -33,8 +34,11 @@ import classes from "./repositories.module.css";
 export const RepositoriesScreen = () => {
   const me = useSignedInMe();
   const [creating, setCreating] = useState(false);
-  const { data: repositories } = useQuery(
-    orpc.repositories.list.queryOptions(),
+  const list = usePagedList(
+    orpc.repositories.list.infiniteOptions({
+      input: (cursor) => ({ cursor }),
+      ...nextPage,
+    }),
   );
   const isAdmin = me.role === "admin";
   return (
@@ -48,8 +52,11 @@ export const RepositoriesScreen = () => {
           )
         }
       >
-        {repositories ? (
-          <RepositoryList repositories={repositories} isAdmin={isAdmin} />
+        {list.items ? (
+          <>
+            <RepositoryList repositories={list.items} isAdmin={isAdmin} />
+            <ShowMore list={list} />
+          </>
         ) : (
           <RepositoryGridSkeleton />
         )}

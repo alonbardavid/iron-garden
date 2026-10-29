@@ -12,7 +12,7 @@ import { receiveGithubWebhook } from "@lib/github";
 import { health } from "./routes/health";
 import { capabilities } from "./routes/capabilities";
 import { setup } from "./routes/setup";
-import { keys, me, users } from "./routes/account";
+import { keys, me, searchUsers } from "./routes/account";
 import { agents } from "./routes/agents";
 import { repositories } from "./routes/repositories";
 import { pullRequests, sessions } from "./routes/sessions";
@@ -39,7 +39,7 @@ const apiHandler = new OpenAPIHandler(
     capabilities,
     setup,
     me,
-    users,
+    searchUsers,
     keys,
     githubTokens,
     agents,

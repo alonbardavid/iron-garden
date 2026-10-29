@@ -13,6 +13,7 @@ import { githubApi, type GithubApi } from "./api";
 import { connectionOf } from "./connections";
 import type { PullPayload } from "./payloads";
 import { linkOf, requireConnection, sameRepository } from "./pulls";
+import { matchesEveryWord } from "./search";
 import { connectionToken, syncConnection, type ConnectionRow } from "./sync";
 
 const log = moduleLogger("github/from-github");
@@ -53,19 +54,25 @@ export async function canOpenFromGithub(
   return available;
 }
 
-// The open GitHub pull requests from the repository's own branches that no
-// open pull request here stands for yet.
+// Up to `limit` of the open GitHub pull requests from the repository's own
+// branches that no open pull request here stands for yet, whose number,
+// title or branch holds every word of `q`.
 export async function githubPullOptions(
   principal: Principal,
   name: string,
+  q: string,
+  limit: number,
 ): Promise<GithubPullOption[]> {
   const { connection, api } = await connected(principal, name);
   const pulls = (await api.openPulls(connection.owner, connection.repo)).filter(
-    (pull) => sameRepository(connection, pull),
+    (pull) =>
+      sameRepository(connection, pull) &&
+      matchesEveryWord(`#${pull.number} ${pull.title} ${pull.head.ref}`, q),
   );
   const taken = await standingFor(connection.repositoryId, pulls);
   const options = pulls
     .filter((pull) => !taken.has(pull.number))
+    .slice(0, limit)
     .map((pull) => ({
       number: pull.number,
       title: pull.title,
@@ -76,7 +83,7 @@ export async function githubPullOptions(
     }));
   log.info("github pull requests listed", {
     connectionId: connection.id,
-    open: pulls.length,
+    matching: pulls.length,
     offered: options.length,
   });
   return options;

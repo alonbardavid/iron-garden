@@ -10,9 +10,13 @@ import {
   newEntityId,
   and,
   eq,
-  desc,
   inArray,
   sql,
+  paginate,
+  matchesAllTerms,
+  searchTerms,
+  type ListRequest,
+  type ListResult,
   type PullRequestStatus,
   type FileChange,
   type Grouper,
@@ -364,17 +368,74 @@ export async function storeGroups(
   });
 }
 
+export type PullRequestListRequest = ListRequest<
+  "number" | "createdAt" | "updatedAt"
+> & { q?: string; status?: PullRequestStatus };
+
+// How many pull requests each status filter keeps; "open" counts those still
+// processing too.
+export type PullRequestCounts = Record<PullRequestStatus, number>;
+
+// A repository's pull requests a page at a time, by number unless `sort`
+// says otherwise. `status` "open" keeps those still processing too; `q`
+// keeps those whose title holds every word of it. Only the page is
+// summarized.
 export async function listPullRequests(
   principal: Principal,
   repositoryName: string,
-): Promise<PullRequestSummary[]> {
+  request: PullRequestListRequest,
+): Promise<ListResult<PullRequestSummary>> {
+  const repository = await authorize(principal, repositoryName, "read");
+  const page = await paginate(
+    getDb()
+      .select()
+      .from(pullRequests)
+      .where(eq(pullRequests.repositoryId, repository.id))
+      .$dynamic(),
+    request,
+    {
+      defaultSort: "number",
+      filters: {
+        q: (q) => matchesAllTerms(pullRequests.title, searchTerms(q)),
+        status: (status) =>
+          status === "open"
+            ? inArray(pullRequests.status, ["open", "processing"])
+            : eq(pullRequests.status, status),
+      },
+    },
+  );
+  return {
+    ...page,
+    items: await summarize(principal, repository, page.items),
+  };
+}
+
+// The repository's pull requests counted per status filter, in one query.
+export async function countPullRequests(
+  principal: Principal,
+  repositoryName: string,
+): Promise<PullRequestCounts> {
   const repository = await authorize(principal, repositoryName, "read");
   const rows = await getDb()
-    .select()
+    .select({
+      status: pullRequests.status,
+      n: sql<number>`cast(count(*) as int)`,
+    })
     .from(pullRequests)
     .where(eq(pullRequests.repositoryId, repository.id))
-    .orderBy(desc(pullRequests.number));
-  return summarize(principal, repository, rows);
+    .groupBy(pullRequests.status);
+  const n = (status: PullRequestStatus) =>
+    rows.find((row) => row.status === status)?.n ?? 0;
+  log.debug("pull requests counted", {
+    repositoryId: repository.id,
+    statuses: rows.length,
+  });
+  return {
+    open: n("open") + n("processing"),
+    processing: n("processing"),
+    merged: n("merged"),
+    closed: n("closed"),
+  };
 }
 
 export async function getPullRequest(

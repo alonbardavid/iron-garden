@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 export const LIST_SORT_DIRECTIONS = ["asc", "desc"] as const;
+// Every paged list serves this many rows unless the caller asks otherwise.
+export const LIST_DEFAULT_LIMIT = 20;
+export const LIST_MAX_LIMIT = 100;
+// The most options an autocomplete gets from the server: typing narrows them.
+export const AUTOCOMPLETE_LIMIT = 5;
 export const LIST_MAX_OFFSET = 10_000;
 export const LIST_TOTAL_CAP = 10_000;
 export const LIST_MAX_SEARCH_LENGTH = 100;
@@ -37,28 +42,48 @@ export function listQuerySchema<
   options: {
     sorts?: Sorts;
     filters?: Filters;
+    defaultDir?: ListSortDirection;
     defaultLimit?: number;
     maxLimit?: number;
   } = {},
 ) {
   const sorts = options.sorts ?? scalarKeys(item);
-  return z
-    .object({
+  return pageQuerySchema(options)
+    .extend({
       q: z.string().trim().max(LIST_MAX_SEARCH_LENGTH).optional(),
       sort: z
         .enum(sorts as [string, ...string[]])
         .optional() as unknown as QueryValue<Sorts[number]>,
-      dir: z.enum(LIST_SORT_DIRECTIONS).default("asc"),
-      limit: z.coerce
-        .number<number>()
-        .int()
-        .min(1)
-        .max(options.maxLimit ?? 200)
-        .default(options.defaultLimit ?? 50),
-      cursor: listCursorSchema.optional(),
+      dir: z.enum(LIST_SORT_DIRECTIONS).default(options.defaultDir ?? "asc"),
       withTotal: queryFlagSchema.default(false),
     })
     .extend((options.filters ?? scalarFilters(item)) as Filters);
+}
+
+// The page position alone, for a list read from somewhere that cannot sort,
+// search or count it, such as GitHub.
+export function pageQuerySchema(
+  options: { defaultLimit?: number; maxLimit?: number } = {},
+) {
+  return z.object({
+    limit: z.coerce
+      .number<number>()
+      .int()
+      .min(1)
+      .max(options.maxLimit ?? LIST_MAX_LIMIT)
+      .default(options.defaultLimit ?? LIST_DEFAULT_LIMIT),
+    cursor: listCursorSchema.optional(),
+  });
+}
+
+// What an autocomplete has typed so far; empty asks for the first options.
+export const searchQuerySchema = z.object({
+  q: z.string().trim().max(LIST_MAX_SEARCH_LENGTH).default(""),
+});
+
+// An autocomplete's options: never more than AUTOCOMPLETE_LIMIT.
+export function searchResultsSchema<Item extends z.ZodType>(item: Item) {
+  return z.array(item).max(AUTOCOMPLETE_LIMIT);
 }
 
 export function listPageSchema<Item extends z.ZodType>(item: Item) {

@@ -2,14 +2,22 @@ import {
   getDb,
   githubTokens,
   newEntityId,
+  paginate,
+  matchesAllTerms,
+  searchTerms,
   and,
   eq,
   desc,
+  or,
+  type ListRequest,
+  type ListResult,
+  type SQL,
 } from "@lib/db-models";
 import { ForgeError, requireUser } from "@lib/forge";
 import type { Principal } from "@lib/identity";
 import { moduleLogger } from "@lib/logging";
 import { githubApi } from "./api";
+import { matchesEveryWord } from "./search";
 import { seal, unseal } from "./secrets";
 
 const log = moduleLogger("github/tokens");
@@ -27,18 +35,41 @@ export interface GithubTokenSummary {
 
 type TokenRow = typeof githubTokens.$inferSelect;
 
-// A user's own GitHub tokens. Only people hold them: GitHub issues personal
-// tokens to people, and an agent uses its owner's through the repositories
-// they connected.
+// A user's own GitHub tokens, a page at a time, newest first unless sorted
+// otherwise. Only people hold them: GitHub issues personal tokens to people,
+// and an agent uses its owner's through the repositories they connected. `q`
+// keeps those whose name or GitHub login holds every word of it.
 export async function listGithubTokens(
   principal: Principal,
+  request: ListRequest<"createdAt" | "name"> & { q?: string },
+): Promise<ListResult<GithubTokenSummary>> {
+  requireUser(principal);
+  const page = await paginate(
+    getDb()
+      .select()
+      .from(githubTokens)
+      .where(eq(githubTokens.userId, principal.userId))
+      .$dynamic(),
+    request,
+    { defaultSort: "createdAt", filters: { q: tokensMatching } },
+  );
+  return { ...page, items: page.items.map(toSummary) };
+}
+
+// Up to `limit` of the user's newest tokens whose name or GitHub login holds
+// every word of `q`.
+export async function searchGithubTokens(
+  principal: Principal,
+  q: string,
+  limit: number,
 ): Promise<GithubTokenSummary[]> {
   requireUser(principal);
   const rows = await getDb()
     .select()
     .from(githubTokens)
-    .where(eq(githubTokens.userId, principal.userId))
-    .orderBy(desc(githubTokens.createdAt));
+    .where(and(eq(githubTokens.userId, principal.userId), tokensMatching(q)))
+    .orderBy(desc(githubTokens.createdAt))
+    .limit(limit);
   return rows.map(toSummary);
 }
 
@@ -78,16 +109,29 @@ export interface TokenRepository {
   description: string | null;
 }
 
-// What one of the caller's tokens can reach on GitHub, to pick from.
-export async function listTokenRepositories(
+// Up to `limit` of the repositories one of the caller's tokens can reach on
+// GitHub whose "owner/repo" holds every word of `q`, to pick from.
+export async function searchTokenRepositories(
   principal: Principal,
   tokenId: string,
+  q: string,
+  limit: number,
 ): Promise<TokenRepository[]> {
   const row = await ownedToken(principal, tokenId);
   const listed = await githubApi(
     await unseal(row.tokenCiphertext),
   ).repositories();
-  return listed.map((repository) => ({
+  const found = listed
+    .filter((repository) =>
+      matchesEveryWord(`${repository.owner.login}/${repository.name}`, q),
+    )
+    .slice(0, limit);
+  log.info("token repositories searched", {
+    tokenId,
+    reachable: listed.length,
+    found: found.length,
+  });
+  return found.map((repository) => ({
     owner: repository.owner.login,
     repo: repository.name,
     private: repository.private,
@@ -141,6 +185,18 @@ export async function tokenPlaintext(tokenId: string): Promise<string> {
     .set({ lastUsedAt: new Date() })
     .where(eq(githubTokens.id, tokenId));
   return unseal(row.ciphertext);
+}
+
+function tokensMatching(q: string): SQL | undefined {
+  const terms = searchTerms(q);
+  return and(
+    ...terms.map((term) =>
+      or(
+        matchesAllTerms(githubTokens.name, [term]),
+        matchesAllTerms(githubTokens.githubLogin, [term]),
+      ),
+    ),
+  );
 }
 
 function toSummary(row: TokenRow): GithubTokenSummary {
