@@ -96,7 +96,7 @@ a new version of that Worker.
 | Pull request opened              | Preview Comment on PR Open | Posts the preview URL when the branch was pushed before its pull request existed. |
 | Pull request, and push to `main` | E2E Tests                  | Build, type-check, lint, unit tests and the Playwright suite. Needs no secrets.   |
 | Branch deleted, and weekly       | Preview Teardown           | Deletes the branch's preview, database and repositories; weekly, prunes orphans.  |
-| Push to `main`                   | Docs to GitHub Pages       | Publishes these docs to GitHub Pages, once you turn Pages on.                     |
+| Push to `main`                   | Docs to GitHub Pages       | Publishes these docs to GitHub Pages when its source is GitHub Actions.           |
 
 How to work with previews and staging is in
 [Developing with staging](/customization/developing-with-staging/).
