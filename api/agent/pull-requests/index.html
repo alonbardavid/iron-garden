@@ -1,0 +1,688 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-rn2fvxlw"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Pull requests | IronGarden</title><link rel="canonical" href="https://alonbardavid.github.io/iron-garden/api/agent/pull-requests/"/><link rel="sitemap" href="/iron-garden/sitemap-index.xml"/><link rel="shortcut icon" href="/iron-garden/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.8"/><meta name="generator" content="Starlight v0.42.6"/><meta property="og:title" content="Pull requests"/><meta property="og:type" content="article"/><meta property="og:url" content="https://alonbardavid.github.io/iron-garden/api/agent/pull-requests/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Open a pull request from a session, send its brackets, refresh it after more pushes, and read and answer reviewers."/><meta property="og:site_name" content="IronGarden"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Open a pull request from a session, send its brackets, refresh it after more pushes, and read and answer reviewers."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/iron-garden/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/iron-garden/_astro/common.BLsJkgqP.css"><script type="module" src="/iron-garden/_astro/page.cNngjUgL.js"></script></head><body class="astro-rn2fvxlw"><a class="sl-skip-link astro-t5w6hptr" href="#_top">Skip to content</a><div class="page sl-flex astro-v77sm6u4"><header class="header astro-v77sm6u4"><div class="header astro-a7okuvk4"><div class="title-wrapper sl-flex astro-a7okuvk4"><style>:root{--brand-from:#D3DAE1;--brand-to:#7C8791;--brand-leaf:#7BB35F;--brand-ink:#E6EAEE;}:root[data-theme="light"]{--brand-from:#C0C8D0;--brand-to:#6B7681;--brand-leaf:#3D8438;--brand-ink:#1F2428;}</style><a href="/iron-garden/" class="site-title astro-hen6hmfb"><svg viewBox="0 2 32 36" aria-hidden="true" class="astro-hen6hmfb"><defs class="astro-hen6hmfb"><linearGradient id="brand-steel" x1="0" y1="0" x2="1" y2="1" class="astro-hen6hmfb"><stop offset="0" stop-color="var(--brand-from)" class="astro-hen6hmfb"></stop><stop offset="1" stop-color="var(--brand-to)" class="astro-hen6hmfb"></stop></linearGradient></defs><path d="M16 10.5 24.5 15.4v9.8L16 30.1 7.5 25.2v-9.8z" fill="url(#brand-steel)" class="astro-hen6hmfb"></path><circle cx="16" cy="20" r="3.4" fill="var(--sl-color-bg-nav)" class="astro-hen6hmfb"></circle><path d="M16 20V9" stroke="var(--brand-leaf)" stroke-width="2.2" stroke-linecap="round" fill="none" class="astro-hen6hmfb"></path><path d="M0 0C0-5.5 3.5-9 9-9 9-3.5 5.5 0 0 0z" fill="var(--brand-leaf)" transform="translate(16 9.6) rotate(25) scale(0.7)" class="astro-hen6hmfb"></path><path d="M0 0C0-5.5 3.5-9 9-9 9-3.5 5.5 0 0 0z" fill="var(--brand-leaf)" transform="translate(16 12.2) rotate(-115) scale(0.62)" class="astro-hen6hmfb"></path></svg><span translate="no" class="astro-hen6hmfb">Iron<span class="garden astro-hen6hmfb">Garden</span></span></a></div><div class="sl-flex print:hidden astro-a7okuvk4"><site-search class="astro-a7okuvk4 astro-lt5osyv5" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-lt5osyv5"><svg aria-hidden="true" class="astro-lt5osyv5 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-lt5osyv5" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-lt5osyv5" style="display: none;"><kbd class="astro-lt5osyv5">Ctrl</kbd><kbd class="astro-lt5osyv5">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-lt5osyv5"><div class="dialog-frame sl-flex astro-lt5osyv5"><button data-close-modal class="sl-flex md:sl-hidden astro-lt5osyv5">Cancel</button><div class="search-container astro-lt5osyv5"><div id="starlight__search" class="astro-lt5osyv5"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/iron-garden/_astro/Search.astro_astro_type_script_index_0_lang.D5ffdMah.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-a7okuvk4"><div class="sl-flex social-icons astro-a7okuvk4"><a href="https://github.com/alonbardavid/iron-garden" rel="me" class="sl-flex astro-jm34uidr"><span class="sr-only astro-jm34uidr">GitHub</span><svg aria-hidden="true" class="astro-jm34uidr astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-t43hllil"><span class="sr-only astro-t43hllil">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-t43hllil astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-t43hllil"><option value="dark" class="astro-t43hllil">Dark</option><option value="light" class="astro-t43hllil">Light</option><option value="auto" selected class="astro-t43hllil">Auto</option></select><svg aria-hidden="true" class="icon caret astro-t43hllil astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div></header><nav class="sidebar print:hidden astro-v77sm6u4" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-vq263mdl"><svg aria-hidden="true" class="open-menu astro-vq263mdl astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-vq263mdl astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-vq263mdl">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-v77sm6u4"><div class="sidebar-content sl-flex astro-v77sm6u4"><sl-sidebar-state-persist data-hash="1f614h1" class="astro-ykwxzpjo"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-cy7q2j77"><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">Getting started</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Introduction</span></a></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">Installation</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/getting-started/installation/quick-start/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Quick start</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/getting-started/installation/manual/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Manual installation</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/getting-started/installation/initial-setup/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Initial setup</span></a></li></ul></details></li><li class="astro-cy7q2j77"><a href="/iron-garden/getting-started/first-run/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">First run</span></a></li></ul></details></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">Agent workflows</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/agent-workflows/agents-and-sessions/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Managing agents and sessions</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/agent-workflows/prompting-your-agent/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Prompting your agent</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/agent-workflows/transcripts/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Transcripts</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/agent-workflows/pull-request-processing/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Pull request processing</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/agent-workflows/live-connection/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Live connection and chat</span></a></li></ul></details></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">Code review</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/code-review/lines-and-chunks/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Lines and chunks</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/code-review/accepting-changes/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Accepting changes</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/code-review/files-view/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Files view</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/code-review/brackets/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Brackets</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/code-review/chunk-context/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Chunk context</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/code-review/confidence-levels/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Confidence levels</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/code-review/agent-chat/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Agent chat</span></a></li></ul></details></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">Capabilities</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/capabilities/github-integration/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">GitHub integration</span></a></li></ul></details></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">Administration</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/administration/server-agent-setup/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Server agent setup</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/administration/prompt-customization/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Prompt customization</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/administration/email/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Email</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/administration/github-setup/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">GitHub setup</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/administration/rules/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Rules</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/administration/monitoring-and-logs/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Monitoring and logs</span></a></li></ul></details></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">Customization</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/customization/custom-domain/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Custom domain</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/customization/pulling-from-origin/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Pulling from origin</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/customization/developing-with-staging/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Developing with staging</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/customization/working-with-edge-stack/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Working with edge-stack</span></a></li></ul></details></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">API</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="7"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/api/overview/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Overview</span></a></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">Agent API</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="8"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/api/agent/sessions/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Sessions</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/api/agent/pull-requests/" aria-current="page" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Pull requests</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/api/agent/transcripts/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Transcripts</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/api/agent/chat/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Chat</span></a></li></ul></details></li><li class="astro-cy7q2j77"><details open class="astro-cy7q2j77"><summary class="astro-cy7q2j77"><span class="group-label astro-cy7q2j77"><span class="large astro-cy7q2j77">User API</span></span><svg aria-hidden="true" class="caret astro-cy7q2j77 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="9"></sl-sidebar-restore><ul class="astro-cy7q2j77"><li class="astro-cy7q2j77"><a href="/iron-garden/api/user/sessions/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Sessions</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/api/user/pull-requests/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Pull requests</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/api/user/reviews/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Reviews</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/api/user/chat/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Chat</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/api/user/agents-and-keys/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Agents and keys</span></a></li><li class="astro-cy7q2j77"><a href="/iron-garden/api/user/repositories/" class="astro-cy7q2j77"><span class="astro-cy7q2j77">Repositories</span></a></li></ul></details></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-5dms3opr"><div class="social-icons astro-5dms3opr"><a href="https://github.com/alonbardavid/iron-garden" rel="me" class="sl-flex astro-jm34uidr"><span class="sr-only astro-jm34uidr">GitHub</span><svg aria-hidden="true" class="astro-jm34uidr astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-t43hllil"><span class="sr-only astro-t43hllil">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-t43hllil astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-t43hllil"><option value="dark" class="astro-t43hllil">Dark</option><option value="light" class="astro-t43hllil">Light</option><option value="auto" selected class="astro-t43hllil">Auto</option></select><svg aria-hidden="true" class="icon caret astro-t43hllil astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-v77sm6u4"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-difsfar7"><aside class="right-sidebar-container print:hidden astro-difsfar7"><div class="right-sidebar astro-difsfar7"><div class="lg:sl-hidden astro-cjyjt6r4"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-gli5vq3c"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-gli5vq3c"><details id="starlight__mobile-toc" class="astro-gli5vq3c"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-gli5vq3c"><span class="toggle sl-flex astro-gli5vq3c">On this page<svg aria-hidden="true" class="caret astro-gli5vq3c astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-gli5vq3c"></span></summary><div class="dropdown astro-gli5vq3c"><ul class="isMobile astro-cflu37ro" style="--depth: 0;"><li style="--depth: 0;" class="astro-cflu37ro"><a href="#_top" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">Overview</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#post-apisessionsidpull-requests" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">POST /api/sessions/${id}/pull-requests</span></a><ul class="isMobile astro-cflu37ro" style="--depth: 1;"><li style="--depth: 1;" class="astro-cflu37ro"><a href="#pull-request-links" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">Pull request links</span></a></li><li style="--depth: 1;" class="astro-cflu37ro"><a href="#the-pull-request-object" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">The pull request object</span></a></li></ul></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#put-apipull-requestsidgroups" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">PUT /api/pull-requests/${id}/groups</span></a><ul class="isMobile astro-cflu37ro" style="--depth: 1;"><li style="--depth: 1;" class="astro-cflu37ro"><a href="#a-group" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">A group</span></a></li><li style="--depth: 1;" class="astro-cflu37ro"><a href="#a-range" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">A range</span></a></li><li style="--depth: 1;" class="astro-cflu37ro"><a href="#a-rule-answer" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">A rule answer</span></a></li></ul></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#post-apipull-requestsidrefresh" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">POST /api/pull-requests/${id}/refresh</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#get-apirepositoriesnamepull-requestsnumber" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">GET /api/repositories/${name}/pull-requests/${number}</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#get-apirepositoriesnamepull-requestsnumbercomments" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">GET /api/repositories/${name}/pull-requests/${number}/comments</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#post-apirepositoriesnamepull-requestsnumbercomments" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">POST /api/repositories/${name}/pull-requests/${number}/comments</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#reviews" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">Reviews</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/iron-garden/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-cjyjt6r4"><div class="sl-container astro-cjyjt6r4"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-cflu37ro" style="--depth: 0;"><li style="--depth: 0;" class="astro-cflu37ro"><a href="#_top" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">Overview</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#post-apisessionsidpull-requests" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">POST /api/sessions/${id}/pull-requests</span></a><ul class="astro-cflu37ro" style="--depth: 1;"><li style="--depth: 1;" class="astro-cflu37ro"><a href="#pull-request-links" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">Pull request links</span></a></li><li style="--depth: 1;" class="astro-cflu37ro"><a href="#the-pull-request-object" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">The pull request object</span></a></li></ul></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#put-apipull-requestsidgroups" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">PUT /api/pull-requests/${id}/groups</span></a><ul class="astro-cflu37ro" style="--depth: 1;"><li style="--depth: 1;" class="astro-cflu37ro"><a href="#a-group" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">A group</span></a></li><li style="--depth: 1;" class="astro-cflu37ro"><a href="#a-range" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">A range</span></a></li><li style="--depth: 1;" class="astro-cflu37ro"><a href="#a-rule-answer" style="--depth: 1;" class="astro-cflu37ro"><span style="--depth: 1;" class="astro-cflu37ro">A rule answer</span></a></li></ul></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#post-apipull-requestsidrefresh" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">POST /api/pull-requests/${id}/refresh</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#get-apirepositoriesnamepull-requestsnumber" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">GET /api/repositories/${name}/pull-requests/${number}</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#get-apirepositoriesnamepull-requestsnumbercomments" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">GET /api/repositories/${name}/pull-requests/${number}/comments</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#post-apirepositoriesnamepull-requestsnumbercomments" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">POST /api/repositories/${name}/pull-requests/${number}/comments</span></a></li><li style="--depth: 0;" class="astro-cflu37ro"><a href="#reviews" style="--depth: 0;" class="astro-cflu37ro"><span style="--depth: 0;" class="astro-cflu37ro">Reviews</span></a></li></ul></nav></starlight-toc><script type="module" src="/iron-garden/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-difsfar7"><main data-pagefind-body class="astro-rn2fvxlw" lang="en" dir="ltr"><div class="content-panel astro-p3ikxwxn"><div class="sl-container astro-p3ikxwxn"><h1 id="_top" class="astro-ftds7a4s">Pull requests</h1></div></div><div class="content-panel astro-p3ikxwxn"><div class="sl-container astro-p3ikxwxn"><div class="sl-markdown-content"><p>An agent opens a pull request from a branch it pushed to its session remote. The pull request is <strong>processing</strong> until its changes are split into brackets (called groups in the API), and <strong>open</strong> for review once they are. People accept changes and merge; agents never do.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="post-apisessionsidpull-requests">POST /api/sessions/{id}/pull-requests</h2><a class="sl-anchor-link" href="#post-apisessionsidpull-requests"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “POST /api/sessions/{id}/pull-requests”</span></a></div>
+<p>Opens a pull request for a branch of the session repository, into the session’s base branch. Only the session’s agent key may call it; the session must be active and the agent needs Write.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">branch</code></td><td data-label="Type">string</td><td data-label="Required">Yes</td><td data-label="Description">The branch in the session repository; up to 200 characters</td></tr><tr><td data-label="Field"><code dir="auto">title</code></td><td data-label="Type">string</td><td data-label="Required">Yes</td><td data-label="Description">One line, up to 200 characters</td></tr><tr><td data-label="Field"><code dir="auto">description</code></td><td data-label="Type">string | null</td><td data-label="Required">No</td><td data-label="Description">Markdown, up to 50,000 characters</td></tr></tbody></table>
+<p>The server compares the branch with its merge base on the base branch. A branch cut from an older commit, or one that merged the base in, shows only its own work. It stores the changed files and up to 250 first-parent commits, attaches the transcripts their <code dir="auto">Agent-Transcript</code> trailers name, copies the repository’s rules onto the pull request, and records the branch’s files in the session’s working set.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">pullRequest</code></td><td data-label="Type">object</td><td data-label="Description">The <a href="#the-pull-request-object">pull request</a>, <code dir="auto">status</code> <code dir="auto">processing</code></td></tr><tr><td data-label="Field"><code dir="auto">grouping</code></td><td data-label="Type">object | null</td><td data-label="Description"><code dir="auto">prompt</code>, the processing prompt to follow, and <code dir="auto">submitUrl</code>, where to send the groups. <code dir="auto">null</code> when the server groups pull requests</td></tr><tr><td data-label="Field"><code dir="auto">links</code></td><td data-label="Type">object</td><td data-label="Description">See <a href="#pull-request-links">Pull request links</a></td></tr><tr><td data-label="Field"><code dir="auto">chat</code></td><td data-label="Type">object</td><td data-label="Description">Where the agent listens for chat on it: <code dir="auto">url</code>, <code dir="auto">messagesUrl</code>, <code dir="auto">socketUrl</code>. See <a href="/iron-garden/api/agent/chat/">Chat</a></td></tr></tbody></table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled"><thead><tr><th>Status</th><th>When</th></tr></thead><tbody><tr><td><code dir="auto">400</code></td><td>The branch is not in the session repository, shares no history with the base, has no changes, or touches more than 1,000 files; or the session ended</td></tr><tr><td><code dir="auto">403</code></td><td>Not an agent key, or the agent has less than Write</td></tr><tr><td><code dir="auto">409</code></td><td>The session already has a processing or open pull request for the branch; the message names it, to refresh instead</td></tr></tbody></table>
+<div class="expressive-code"><link rel="stylesheet" href="/iron-garden/_astro/ec.w36nc.css"><script type="module" src="/iron-garden/_astro/ec.0vx5m.js"></script><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">git</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">push</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">session</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">meter-usage</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">curl</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-sS</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-X</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">POST</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C5E478;--1:#3B61B0">$PULL_REQUESTS_URL</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Authorization: Bearer </span><span style="--0:#C5E478;--1:#3B61B0">$IG_AGENT_API_KEY</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Content-Type: application/json</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--data</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">@-</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">&#x3C;&#x3C;</span><span style="--0:#D9F5DD;--1:#111111">'EOF'</span></div></div><div class="ec-line"><div class="code"><span style="--0:#ECC48D;--1:#984E4D">{ "branch": "meter-usage", "title": "Meter API calls", "description": "Records each metered call so invoices can bill usage." }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D9F5DD;--1:#111111">EOF</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="git push session meter-usagecurl -sS -X POST &#x22;$PULL_REQUESTS_URL&#x22; \  -H &#x22;Authorization: Bearer $IG_AGENT_API_KEY&#x22; \  -H &#x22;Content-Type: application/json&#x22; \  --data @- <<&#x27;EOF&#x27;{ &#x22;branch&#x22;: &#x22;meter-usage&#x22;, &#x22;title&#x22;: &#x22;Meter API calls&#x22;, &#x22;description&#x22;: &#x22;Records each metered call so invoices can bill usage.&#x22; }EOF"><div></div></button></div></figure></div>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"pullRequest"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">PR_…</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"number"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">12</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"repository"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">billing</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"title"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">Meter API calls</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"status"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">processing</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"branch"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">meter-usage</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"targetBranch"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">main</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"revision"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"groupedBy"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">agent</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"origin"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">agent</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"files"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#096E72">"path"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">src/usage/record.ts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#096E72">"change"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">added</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#096E72">"oldLines"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">        </span><span style="--0:#7FDBCA;--1:#096E72">"newLines"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">40</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">],</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"groups"</span><span style="--0:#D6DEEB;--1:#403F53">: [],</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"…"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">…</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"grouping"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"prompt"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">…</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"submitUrl"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">https://&#x3C;instance>/api/pull-requests/PR_…/groups</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"links"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"url"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">https://&#x3C;instance>/billing/pulls/12</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"submitUrl"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">https://&#x3C;instance>/api/pull-requests/PR_…/groups</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"refreshUrl"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">https://&#x3C;instance>/api/pull-requests/PR_…/refresh</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"commentsUrl"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">https://&#x3C;instance>/api/repositories/billing/pull-requests/12/comments</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"chatUrl"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">https://&#x3C;instance>/api/pull-requests/PR_…/chat</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"chat"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"url"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">https://&#x3C;instance>/api/chat/&#x3C;key></span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"messagesUrl"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">https://&#x3C;instance>/api/chat/&#x3C;key>/messages</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#7FDBCA;--1:#096E72">"socketUrl"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">wss://&#x3C;instance>/api/chat/&#x3C;key>/socket</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{  &#x22;pullRequest&#x22;: {    &#x22;id&#x22;: &#x22;PR_…&#x22;,    &#x22;number&#x22;: 12,    &#x22;repository&#x22;: &#x22;billing&#x22;,    &#x22;title&#x22;: &#x22;Meter API calls&#x22;,    &#x22;status&#x22;: &#x22;processing&#x22;,    &#x22;branch&#x22;: &#x22;meter-usage&#x22;,    &#x22;targetBranch&#x22;: &#x22;main&#x22;,    &#x22;revision&#x22;: 1,    &#x22;groupedBy&#x22;: &#x22;agent&#x22;,    &#x22;origin&#x22;: &#x22;agent&#x22;,    &#x22;files&#x22;: [      {        &#x22;path&#x22;: &#x22;src/usage/record.ts&#x22;,        &#x22;change&#x22;: &#x22;added&#x22;,        &#x22;oldLines&#x22;: 0,        &#x22;newLines&#x22;: 40      }    ],    &#x22;groups&#x22;: [],    &#x22;…&#x22;: &#x22;…&#x22;  },  &#x22;grouping&#x22;: {    &#x22;prompt&#x22;: &#x22;…&#x22;,    &#x22;submitUrl&#x22;: &#x22;https://<instance>/api/pull-requests/PR_…/groups&#x22;  },  &#x22;links&#x22;: {    &#x22;url&#x22;: &#x22;https://<instance>/billing/pulls/12&#x22;,    &#x22;submitUrl&#x22;: &#x22;https://<instance>/api/pull-requests/PR_…/groups&#x22;,    &#x22;refreshUrl&#x22;: &#x22;https://<instance>/api/pull-requests/PR_…/refresh&#x22;,    &#x22;commentsUrl&#x22;: &#x22;https://<instance>/api/repositories/billing/pull-requests/12/comments&#x22;,    &#x22;chatUrl&#x22;: &#x22;https://<instance>/api/pull-requests/PR_…/chat&#x22;  },  &#x22;chat&#x22;: {    &#x22;url&#x22;: &#x22;https://<instance>/api/chat/<key>&#x22;,    &#x22;messagesUrl&#x22;: &#x22;https://<instance>/api/chat/<key>/messages&#x22;,    &#x22;socketUrl&#x22;: &#x22;wss://<instance>/api/chat/<key>/socket&#x22;  }}"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="pull-request-links">Pull request links</h3><a class="sl-anchor-link" href="#pull-request-links"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Pull request links”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled"><thead><tr><th>Link</th><th>Endpoint</th></tr></thead><tbody><tr><td><code dir="auto">url</code></td><td>The pull request’s page</td></tr><tr><td><code dir="auto">submitUrl</code></td><td><a href="#put-apipull-requestsidgroups"><code dir="auto">PUT /api/pull-requests/{id}/groups</code></a></td></tr><tr><td><code dir="auto">refreshUrl</code></td><td><a href="#post-apipull-requestsidrefresh"><code dir="auto">POST /api/pull-requests/{id}/refresh</code></a></td></tr><tr><td><code dir="auto">commentsUrl</code></td><td><a href="#get-apirepositoriesnamepull-requestsnumbercomments"><code dir="auto">GET</code></a> and <a href="#post-apirepositoriesnamepull-requestsnumbercomments"><code dir="auto">POST</code> comments</a></td></tr><tr><td><code dir="auto">chatUrl</code></td><td><a href="/iron-garden/api/agent/chat/#post-apipull-requestsidchat"><code dir="auto">POST /api/pull-requests/{id}/chat</code></a>, for new chat URLs</td></tr></tbody></table>
+<div class="sl-heading-wrapper level-h3"><h3 id="the-pull-request-object">The pull request object</h3><a class="sl-anchor-link" href="#the-pull-request-object"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “The pull request object”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">id</code></td><td data-label="Type">string</td><td data-label="Description">Starts with <code dir="auto">PR_</code>; the id in <code dir="auto">/api/pull-requests/{id}/…</code></td></tr><tr><td data-label="Field"><code dir="auto">number</code></td><td data-label="Type">number</td><td data-label="Description">Its number in the repository; the <code dir="auto">{number}</code> in <code dir="auto">/api/repositories/{name}/pull-requests/{number}</code></td></tr><tr><td data-label="Field"><code dir="auto">repository</code></td><td data-label="Type">string</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">title</code></td><td data-label="Type">string</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">description</code></td><td data-label="Type">string | null</td><td data-label="Description">Markdown</td></tr><tr><td data-label="Field"><code dir="auto">status</code></td><td data-label="Type"><code dir="auto">processing</code> | <code dir="auto">open</code> | <code dir="auto">merged</code> | <code dir="auto">closed</code></td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">branch</code></td><td data-label="Type">string</td><td data-label="Description">The session branch</td></tr><tr><td data-label="Field"><code dir="auto">targetBranch</code></td><td data-label="Type">string</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">revision</code></td><td data-label="Type">number</td><td data-label="Description">1, and one more on each refresh</td></tr><tr><td data-label="Field"><code dir="auto">groupedBy</code></td><td data-label="Type"><code dir="auto">agent</code> | <code dir="auto">server</code></td><td data-label="Description">Who groups this revision</td></tr><tr><td data-label="Field"><code dir="auto">origin</code></td><td data-label="Type"><code dir="auto">agent</code> | <code dir="auto">github</code></td><td data-label="Description">Opened by an agent’s session, or from GitHub</td></tr><tr><td data-label="Field"><code dir="auto">agent</code></td><td data-label="Type"><code dir="auto">{ name, ownerName }</code> | null</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">openedBy</code></td><td data-label="Type">string | null</td><td data-label="Description">Who opened one from GitHub</td></tr><tr><td data-label="Field"><code dir="auto">baseCommit</code></td><td data-label="Type">string</td><td data-label="Description">The merge base the change is read against</td></tr><tr><td data-label="Field"><code dir="auto">headCommit</code></td><td data-label="Type">string</td><td data-label="Description">The branch’s head this revision reviews</td></tr><tr><td data-label="Field"><code dir="auto">processingError</code></td><td data-label="Type">string | null</td><td data-label="Description">Why the server could not group this revision; it opened without groups</td></tr><tr><td data-label="Field"><code dir="auto">files</code></td><td data-label="Type"><code dir="auto">{ path, change, oldLines, newLines }[]</code></td><td data-label="Description"><code dir="auto">change</code> is <code dir="auto">added</code>, <code dir="auto">modified</code> or <code dir="auto">deleted</code></td></tr><tr><td data-label="Field"><code dir="auto">fileCount</code></td><td data-label="Type">number</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">groups</code></td><td data-label="Type"><code dir="auto">{ id, title, kind, description, ranges }[]</code></td><td data-label="Description">The brackets, as sent to <a href="#put-apipull-requestsidgroups"><code dir="auto">PUT …/groups</code></a></td></tr><tr><td data-label="Field"><code dir="auto">groupCount</code></td><td data-label="Type">number</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">review</code></td><td data-label="Type"><code dir="auto">{ changes, accepted }</code></td><td data-label="Description">The caller’s progress; <code dir="auto">changes</code> is null until someone opens the pull request. Always 0 accepted for an agent</td></tr><tr><td data-label="Field"><code dir="auto">github</code></td><td data-label="Type"><code dir="auto">{ number, url, state }</code> | null</td><td data-label="Description">The GitHub pull request it stands for, once there is one</td></tr><tr><td data-label="Field"><code dir="auto">merge</code></td><td data-label="Type"><code dir="auto">{ method, commit, by, at }</code> | null</td><td data-label="Description">How it was merged</td></tr><tr><td data-label="Field"><code dir="auto">createdAt</code></td><td data-label="Type">number</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">updatedAt</code></td><td data-label="Type">number</td><td data-label="Description"></td></tr></tbody></table>
+<div class="sl-heading-wrapper level-h2"><h2 id="put-apipull-requestsidgroups">PUT /api/pull-requests/{id}/groups</h2><a class="sl-anchor-link" href="#put-apipull-requestsidgroups"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “PUT /api/pull-requests/{id}/groups”</span></a></div>
+<p>Sends the brackets for the current revision. The request replaces any groups sent before, and a valid one opens the pull request for review. The session’s agent may call it, with Write on the repository, while the pull request is processing or open.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">groups</code></td><td data-label="Type">array</td><td data-label="Required">Yes</td><td data-label="Description">Up to 100 <a href="#a-group">groups</a></td></tr><tr><td data-label="Field"><code dir="auto">rules</code></td><td data-label="Type">array</td><td data-label="Required">No</td><td data-label="Description">Up to 100 <a href="#a-rule-answer">rule answers</a>, for the prompt rules</td></tr></tbody></table>
+<div class="sl-heading-wrapper level-h3"><h3 id="a-group">A group</h3><a class="sl-anchor-link" href="#a-group"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “A group”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">title</code></td><td data-label="Type">string</td><td data-label="Required">Yes</td><td data-label="Description">A few plain words, up to 200 characters</td></tr><tr><td data-label="Field"><code dir="auto">kind</code></td><td data-label="Type">string</td><td data-label="Required">Yes</td><td data-label="Description"><code dir="auto">flow</code>, <code dir="auto">refactor</code>, <code dir="auto">rename</code>, <code dir="auto">move</code>, <code dir="auto">copy</code>, <code dir="auto">schema</code>, <code dir="auto">generated</code>, <code dir="auto">config</code>, <code dir="auto">tests</code>, <code dir="auto">docs</code> or <code dir="auto">other</code></td></tr><tr><td data-label="Field"><code dir="auto">description</code></td><td data-label="Type">string | null</td><td data-label="Required">No</td><td data-label="Description">What the lines do and why, up to 5,000 characters</td></tr><tr><td data-label="Field"><code dir="auto">ranges</code></td><td data-label="Type">array</td><td data-label="Required">Yes</td><td data-label="Description">1 to 500 <a href="#a-range">ranges</a>, from any files</td></tr></tbody></table>
+<div class="sl-heading-wrapper level-h3"><h3 id="a-range">A range</h3><a class="sl-anchor-link" href="#a-range"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “A range”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">path</code></td><td data-label="Type">string</td><td data-label="Required">Yes</td><td data-label="Description">A file the pull request changes</td></tr><tr><td data-label="Field"><code dir="auto">start</code></td><td data-label="Type">number</td><td data-label="Required">Yes</td><td data-label="Description">First line, 1-based, in the new version of the file (the old one for a deleted file)</td></tr><tr><td data-label="Field"><code dir="auto">end</code></td><td data-label="Type">number</td><td data-label="Required">Yes</td><td data-label="Description">Last line, inclusive</td></tr><tr><td data-label="Field"><code dir="auto">note</code></td><td data-label="Type">string</td><td data-label="Required">No</td><td data-label="Description">One sentence shown above the lines, up to 500 characters</td></tr><tr><td data-label="Field"><code dir="auto">movedFrom</code></td><td data-label="Type"><code dir="auto">{ path, start, end }</code></td><td data-label="Required">No</td><td data-label="Description">Where moved lines came from: a changed file that existed before the change, in its old version</td></tr><tr><td data-label="Field"><code dir="auto">reference</code></td><td data-label="Type"><code dir="auto">{ path, start, end }</code></td><td data-label="Required">No</td><td data-label="Description">Existing code the lines were copied from or modelled on: a text file on the target branch at the base commit</td></tr></tbody></table>
+<p>A line may sit in more than one group. Lines in none show to reviewers as not in a group.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="a-rule-answer">A rule answer</h3><a class="sl-anchor-link" href="#a-rule-answer"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “A rule answer”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">rule</code></td><td data-label="Type">string</td><td data-label="Required">Yes</td><td data-label="Description">The id of a prompt rule, as the processing prompt names it</td></tr><tr><td data-label="Field"><code dir="auto">ranges</code></td><td data-label="Type"><code dir="auto">{ path, start, end }[]</code></td><td data-label="Required">Yes</td><td data-label="Description">Up to 500 ranges: the changed lines the rule describes</td></tr></tbody></table>
+<p>The response is the <a href="#the-pull-request-object">pull request</a>, <code dir="auto">status</code> <code dir="auto">open</code>, with its <code dir="auto">groups</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled"><thead><tr><th>Status</th><th>When</th></tr></thead><tbody><tr><td><code dir="auto">400</code></td><td>A range is wrong, listing every problem at once, one per line; or the pull request is merged or closed</td></tr><tr><td><code dir="auto">403</code></td><td>The server groups this revision, or the caller has less than Write</td></tr><tr><td><code dir="auto">404</code></td><td>No such pull request, or not one of this agent’s sessions</td></tr></tbody></table>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">groups[0].ranges[0]: lines 1-9 are outside hello.txt, which has 2 lines</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">groups[1].ranges[0].movedFrom: src/new.ts must be a changed file that existed before this change</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="groups[0].ranges[0]: lines 1-9 are outside hello.txt, which has 2 linesgroups[1].ranges[0].movedFrom: src/new.ts must be a changed file that existed before this change"><div></div></button></div></figure></div>
+<p>Fix the problems and send the whole set again.</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">curl</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-sS</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-X</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">PUT</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C5E478;--1:#3B61B0">$SUBMIT_URL</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Authorization: Bearer </span><span style="--0:#C5E478;--1:#3B61B0">$IG_AGENT_API_KEY</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Content-Type: application/json</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--data</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">@groups.json</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="curl -sS -X PUT &#x22;$SUBMIT_URL&#x22; \  -H &#x22;Authorization: Bearer $IG_AGENT_API_KEY&#x22; \  -H &#x22;Content-Type: application/json&#x22; \  --data @groups.json"><div></div></button></div></figure></div>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"groups"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"title"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">Usage flow</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"kind"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">flow</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"description"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">How a metered call becomes an invoice line.</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"ranges"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"path"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">src/usage/record.ts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"start"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">12</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"end"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">40</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"note"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">Each metered call is recorded with its team and units.</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">{ </span><span style="--0:#7FDBCA;--1:#096E72">"path"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">src/billing/invoice.ts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"start"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">8</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"end"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">25</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"title"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">formatMoney moves to billing</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"kind"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">move</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"ranges"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"path"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">src/billing/money.ts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"start"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"end"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">30</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"movedFrom"</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#096E72">"path"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">src/utils/format.ts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"start"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">4</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"end"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">33</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"title"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">A usage route copied from the credits route</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"kind"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">copy</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"ranges"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"path"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">src/routes/usage.ts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"start"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"end"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">29</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">          </span><span style="--0:#7FDBCA;--1:#096E72">"reference"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span></div></div><div class="ec-line"><div class="code"><span class="indent">            </span><span style="--0:#7FDBCA;--1:#096E72">"path"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">src/routes/credits.ts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">            </span><span style="--0:#7FDBCA;--1:#096E72">"start"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">            </span><span style="--0:#7FDBCA;--1:#096E72">"end"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">28</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">          </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">        </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">      </span></span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">],</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"rules"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"rule"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">&#x3C;rule id from the prompt></span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">      </span><span style="--0:#7FDBCA;--1:#096E72">"ranges"</span><span style="--0:#D6DEEB;--1:#403F53">: [{ </span><span style="--0:#7FDBCA;--1:#096E72">"path"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">src/billing/total.ts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"start"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">3</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"end"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">9</span><span style="--0:#D6DEEB;--1:#403F53"> }]</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{  &#x22;groups&#x22;: [    {      &#x22;title&#x22;: &#x22;Usage flow&#x22;,      &#x22;kind&#x22;: &#x22;flow&#x22;,      &#x22;description&#x22;: &#x22;How a metered call becomes an invoice line.&#x22;,      &#x22;ranges&#x22;: [        {          &#x22;path&#x22;: &#x22;src/usage/record.ts&#x22;,          &#x22;start&#x22;: 12,          &#x22;end&#x22;: 40,          &#x22;note&#x22;: &#x22;Each metered call is recorded with its team and units.&#x22;        },        { &#x22;path&#x22;: &#x22;src/billing/invoice.ts&#x22;, &#x22;start&#x22;: 8, &#x22;end&#x22;: 25 }      ]    },    {      &#x22;title&#x22;: &#x22;formatMoney moves to billing&#x22;,      &#x22;kind&#x22;: &#x22;move&#x22;,      &#x22;ranges&#x22;: [        {          &#x22;path&#x22;: &#x22;src/billing/money.ts&#x22;,          &#x22;start&#x22;: 1,          &#x22;end&#x22;: 30,          &#x22;movedFrom&#x22;: { &#x22;path&#x22;: &#x22;src/utils/format.ts&#x22;, &#x22;start&#x22;: 4, &#x22;end&#x22;: 33 }        }      ]    },    {      &#x22;title&#x22;: &#x22;A usage route copied from the credits route&#x22;,      &#x22;kind&#x22;: &#x22;copy&#x22;,      &#x22;ranges&#x22;: [        {          &#x22;path&#x22;: &#x22;src/routes/usage.ts&#x22;,          &#x22;start&#x22;: 1,          &#x22;end&#x22;: 29,          &#x22;reference&#x22;: {            &#x22;path&#x22;: &#x22;src/routes/credits.ts&#x22;,            &#x22;start&#x22;: 1,            &#x22;end&#x22;: 28          }        }      ]    }  ],  &#x22;rules&#x22;: [    {      &#x22;rule&#x22;: &#x22;<rule id from the prompt>&#x22;,      &#x22;ranges&#x22;: [{ &#x22;path&#x22;: &#x22;src/billing/total.ts&#x22;, &#x22;start&#x22;: 3, &#x22;end&#x22;: 9 }]    }  ]}"><div></div></button></div></figure></div>
+<p>See <a href="/iron-garden/agent-workflows/pull-request-processing/">Pull request processing</a> for how the prompt asks agents to group.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="post-apipull-requestsidrefresh">POST /api/pull-requests/{id}/refresh</h2><a class="sl-anchor-link" href="#post-apipull-requestsidrefresh"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “POST /api/pull-requests/{id}/refresh”</span></a></div>
+<p>Reads the branch again after more pushes. The pull request gets a new revision: its files, commits and rules are read again, its groups are dropped, and it is processing again. The session’s agent may call it, with Write, while the session is active and the pull request is processing or open. It takes no body.</p>
+<p>The response has the same shape as <a href="#post-apisessionsidpull-requests">opening one</a>, without <code dir="auto">chat</code>: a new <code dir="auto">grouping.prompt</code> unless the server groups it.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled"><thead><tr><th>Status</th><th>When</th></tr></thead><tbody><tr><td><code dir="auto">400</code></td><td>The pull request is merged or closed, the session ended, or the branch is refused as when opening one</td></tr></tbody></table>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">git</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">push</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">session</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">meter-usage</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">curl</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-sS</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-X</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">POST</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C5E478;--1:#3B61B0">$REFRESH_URL</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Authorization: Bearer </span><span style="--0:#C5E478;--1:#3B61B0">$IG_AGENT_API_KEY</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="git push session meter-usagecurl -sS -X POST &#x22;$REFRESH_URL&#x22; -H &#x22;Authorization: Bearer $IG_AGENT_API_KEY&#x22;"><div></div></button></div></figure></div>
+<p>Refresh after every push. Merging refuses a branch with commits the review has not seen. On a repository not connected to GitHub, merging also needs the target branch not to have moved past where the branch left it; merge the target into the branch, push and refresh.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get-apirepositoriesnamepull-requestsnumber">GET /api/repositories/{name}/pull-requests/{number}</h2><a class="sl-anchor-link" href="#get-apirepositoriesnamepull-requestsnumber"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “GET /api/repositories/{name}/pull-requests/{number}”</span></a></div>
+<p>The <a href="#the-pull-request-object">pull request</a>, for anyone who can read the repository. A <code dir="auto">processing</code> status turning <code dir="auto">open</code> means the groups arrived.</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">curl</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-sS</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">https://&#x3C;instance>/api/repositories/billing/pull-requests/12</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Authorization: Bearer </span><span style="--0:#C5E478;--1:#3B61B0">$IG_AGENT_API_KEY</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="curl -sS https://<instance>/api/repositories/billing/pull-requests/12 \  -H &#x22;Authorization: Bearer $IG_AGENT_API_KEY&#x22;"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h2"><h2 id="get-apirepositoriesnamepull-requestsnumbercomments">GET /api/repositories/{name}/pull-requests/{number}/comments</h2><a class="sl-anchor-link" href="#get-apirepositoriesnamepull-requestsnumbercomments"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “GET /api/repositories/{name}/pull-requests/{number}/comments”</span></a></div>
+<p>Every comment that went out on the pull request, and the caller’s own drafts, oldest first. The <code dir="auto">links.commentsUrl</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">id</code></td><td data-label="Type">string</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">parent</code></td><td data-label="Type">string | null</td><td data-label="Description">The comment a reply answers</td></tr><tr><td data-label="Field"><code dir="auto">author</code></td><td data-label="Type">object | null</td><td data-label="Description"><code dir="auto">{ kind: "user", id, name }</code> or <code dir="auto">{ kind: "agent", id, name, ownerName }</code></td></tr><tr><td data-label="Field"><code dir="auto">mine</code></td><td data-label="Type">boolean</td><td data-label="Description">Whether the caller wrote it</td></tr><tr><td data-label="Field"><code dir="auto">kind</code></td><td data-label="Type"><code dir="auto">comment</code> | <code dir="auto">flag</code> | <code dir="auto">accept</code> | <code dir="auto">ask</code> | null</td><td data-label="Description">Null on a reply. A <code dir="auto">flag</code> marks something that must change</td></tr><tr><td data-label="Field"><code dir="auto">path</code></td><td data-label="Type">string | null</td><td data-label="Description">The file, on a comment on lines</td></tr><tr><td data-label="Field"><code dir="auto">start</code></td><td data-label="Type">number | null</td><td data-label="Description">First line, in the new version of the file</td></tr><tr><td data-label="Field"><code dir="auto">end</code></td><td data-label="Type">number | null</td><td data-label="Description">Last line</td></tr><tr><td data-label="Field"><code dir="auto">body</code></td><td data-label="Type">string</td><td data-label="Description">Markdown</td></tr><tr><td data-label="Field"><code dir="auto">revision</code></td><td data-label="Type">number</td><td data-label="Description">The revision it was written on</td></tr><tr><td data-label="Field"><code dir="auto">headCommit</code></td><td data-label="Type">string</td><td data-label="Description">The head commit it was written on</td></tr><tr><td data-label="Field"><code dir="auto">status</code></td><td data-label="Type"><code dir="auto">draft</code> | <code dir="auto">sent</code></td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">review</code></td><td data-label="Type">string | null</td><td data-label="Description">The review it went out with</td></tr><tr><td data-label="Field"><code dir="auto">resolved</code></td><td data-label="Type"><code dir="auto">{ by, at, commit }</code> | null</td><td data-label="Description">Set once the flag’s author resolved it</td></tr><tr><td data-label="Field"><code dir="auto">sentAt</code></td><td data-label="Type">number | null</td><td data-label="Description"></td></tr><tr><td data-label="Field"><code dir="auto">createdAt</code></td><td data-label="Type">number</td><td data-label="Description"></td></tr></tbody></table>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">curl</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-sS</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C5E478;--1:#3B61B0">$COMMENTS_URL</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Authorization: Bearer </span><span style="--0:#C5E478;--1:#3B61B0">$IG_AGENT_API_KEY</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="curl -sS &#x22;$COMMENTS_URL&#x22; -H &#x22;Authorization: Bearer $IG_AGENT_API_KEY&#x22;"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h2"><h2 id="post-apirepositoriesnamepull-requestsnumbercomments">POST /api/repositories/{name}/pull-requests/{number}/comments</h2><a class="sl-anchor-link" href="#post-apirepositoriesnamepull-requestsnumbercomments"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “POST /api/repositories/{name}/pull-requests/{number}/comments”</span></a></div>
+<p>A reply to a comment, or a comment on lines. Anything an agent writes goes out at once. An agent’s comment on lines must be of kind <code dir="auto">comment</code>; only people flag, accept or ask.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled stacked"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td data-label="Field"><code dir="auto">parent</code></td><td data-label="Type">string</td><td data-label="Required">For a reply</td><td data-label="Description">The comment that starts the thread</td></tr><tr><td data-label="Field"><code dir="auto">kind</code></td><td data-label="Type">string</td><td data-label="Required">For a comment on lines</td><td data-label="Description"><code dir="auto">comment</code> for an agent</td></tr><tr><td data-label="Field"><code dir="auto">path</code></td><td data-label="Type">string</td><td data-label="Required">For a comment on lines</td><td data-label="Description">A file the pull request changes</td></tr><tr><td data-label="Field"><code dir="auto">start</code></td><td data-label="Type">number</td><td data-label="Required">For a comment on lines</td><td data-label="Description">First line, 1-based, in the new version of the file</td></tr><tr><td data-label="Field"><code dir="auto">end</code></td><td data-label="Type">number</td><td data-label="Required">For a comment on lines</td><td data-label="Description">Last line, inclusive</td></tr><tr><td data-label="Field"><code dir="auto">body</code></td><td data-label="Type">string</td><td data-label="Required">Yes</td><td data-label="Description">Markdown, up to 20,000 characters</td></tr></tbody></table>
+<p>The response is the <a href="#get-apirepositoriesnamepull-requestsnumbercomments">comment</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table class="labelled"><thead><tr><th>Status</th><th>When</th></tr></thead><tbody><tr><td><code dir="auto">400</code></td><td>Neither <code dir="auto">parent</code> nor all of <code dir="auto">kind</code>, <code dir="auto">path</code>, <code dir="auto">start</code> and <code dir="auto">end</code>; lines outside the file; or <code dir="auto">parent</code> is itself a reply</td></tr><tr><td><code dir="auto">403</code></td><td>An agent sent a <code dir="auto">kind</code> other than <code dir="auto">comment</code></td></tr><tr><td><code dir="auto">404</code></td><td>No such parent comment</td></tr></tbody></table>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">curl</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-sS</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-X</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">POST</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C5E478;--1:#3B61B0">$COMMENTS_URL</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Authorization: Bearer </span><span style="--0:#C5E478;--1:#3B61B0">$IG_AGENT_API_KEY</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-H</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Content-Type: application/json</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">--data</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">@-</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">&#x3C;&#x3C;</span><span style="--0:#D9F5DD;--1:#111111">'EOF'</span></div></div><div class="ec-line"><div class="code"><span style="--0:#ECC48D;--1:#984E4D">{ "parent": "CMT_…", "body": "Fixed in the second revision: `units` is now validated." }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D9F5DD;--1:#111111">EOF</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="curl -sS -X POST &#x22;$COMMENTS_URL&#x22; \  -H &#x22;Authorization: Bearer $IG_AGENT_API_KEY&#x22; \  -H &#x22;Content-Type: application/json&#x22; \  --data @- <<&#x27;EOF&#x27;{ &#x22;parent&#x22;: &#x22;CMT_…&#x22;, &#x22;body&#x22;: &#x22;Fixed in the second revision: &#x60;units&#x60; is now validated.&#x22; }EOF"><div></div></button></div></figure></div>
+<p>A flag stays open until the person who set it resolves it. An agent deletes a comment of its own with <code dir="auto">DELETE /api/repositories/{name}/pull-requests/{number}/comments/{comment}</code>, which answers <code dir="auto">{ "ok": true }</code>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="reviews">Reviews</h2><a class="sl-anchor-link" href="#reviews"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Reviews”</span></a></div>
+<p>An agent reads the reviews people sent with <a href="/iron-garden/api/user/pull-requests/#get-apirepositoriesnamepull-requestsnumberactivity"><code dir="auto">GET /api/repositories/{name}/pull-requests/{number}/activity</code></a>: each has a <code dir="auto">verdict</code> (<code dir="auto">accept</code> or <code dir="auto">changes</code>) and a <code dir="auto">body</code>. Accepting changes, submitting a review and merging are refused to agent keys with <code dir="auto">403</code>; see <a href="/iron-garden/api/user/reviews/">User API: Reviews</a>.</p></div><dialog class="zoom astro-hrnzbvcf" aria-label="Full-size image"><form method="dialog" class="astro-hrnzbvcf"><button class="astro-hrnzbvcf">Close</button></form><img alt="" class="astro-hrnzbvcf"></dialog><script type="module">var e=document.querySelector(`dialog.zoom`),t=e.querySelector(`img`);document.addEventListener(`click`,n=>{let r=n.target.closest(`.sl-markdown-content img`);r instanceof HTMLImageElement&&!r.closest(`a`)&&(t.src=r.currentSrc,t.alt=r.alt,t.style.width=`${r.naturalWidth/2}px`,e.showModal())}),e.addEventListener(`click`,t=>{t.target===e&&e.close()});</script><footer class="sl-flex astro-fr6nk5tn"><div class="meta sl-flex astro-fr6nk5tn"></div><div class="pagination-links print:hidden astro-lmmomrs3" dir="ltr"><a href="/iron-garden/api/agent/sessions/" rel="prev" class="astro-lmmomrs3"><svg aria-hidden="true" class="astro-lmmomrs3 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-lmmomrs3">Previous<br class="astro-lmmomrs3"><span class="link-title astro-lmmomrs3">Sessions</span></span></a><a href="/iron-garden/api/agent/transcripts/" rel="next" class="astro-lmmomrs3"><svg aria-hidden="true" class="astro-lmmomrs3 astro-st46h4aq" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-lmmomrs3">Next<br class="astro-lmmomrs3"><span class="link-title astro-lmmomrs3">Transcripts</span></span></a></div></footer></div></div></main></div></div></div></div></body></html>
