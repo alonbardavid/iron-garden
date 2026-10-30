@@ -48,15 +48,11 @@ exists.
 
 The operating docs (`apps/docs`) ship inside every Worker at `/docs/`, and `docs-pages.yml`
 also publishes them on every push to `main`: it asks GitHub for the Pages address (a custom
-domain included), builds them for it and force-pushes the result as the single commit of the
-`gh-pages` branch. A push skips publishing while Pages does not serve `gh-pages`, so a
-repository without Pages never gets the branch. One-time setup:
-
-1. Run **Docs to GitHub Pages** by hand (Actions tab), which publishes `gh-pages` regardless:
-   Settings can only pick a branch that exists.
-2. Settings › Pages › Build and deployment: **Deploy from a branch**, `gh-pages`, `/ (root)`.
-
-From then on each push to `main` republishes them.
+domain included), builds them for it and deploys the build straight to Pages, with no branch.
+The Pages source is the switch: Settings › Pages › Build and deployment › Source: **GitHub
+Actions** publishes them, and any other source, or Pages off, skips publishing. Switching away
+keeps serving the last deploy; to take the site down, set the source to **Deploy from a
+branch**, branch **None**.
 
 ## Preview
 
